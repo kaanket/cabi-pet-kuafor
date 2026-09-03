@@ -47,7 +47,7 @@ let db={customers:[],appointments:[]},channel=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
 function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
-async function login(){let email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('E-posta ve şifre gerekli.');let{error}=await sb.auth.signInWithPassword({email,password});if(error)return msg(error.message)}
+async function login(){let email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('E-posta ve şifre gerekli.');msg('Giriş yapılıyor...',true);let{data,error}=await sb.auth.signInWithPassword({email,password});if(error)return msg(error.message);showApp();await loadAll();subscribe()}
 async function signup(){let email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6)return msg('Geçerli e-posta ve en az 6 karakter şifre gir.');let{data,error}=await sb.auth.signUp({email,password});if(error)return msg(error.message);msg(data.session?'Kayıt tamamlandı.':'Kayıt tamamlandı. E-postanı doğrula, sonra giriş yap.',true)}
 async function logout(){await sb.auth.signOut()}
 async function start(){let{data:{session}}=await sb.auth.getSession();if(session){showApp();await loadAll();subscribe()}else{$('auth').style.display='flex';$('main').style.display='none'}sb.auth.onAuthStateChange(async(_e,s)=>{if(s){showApp();await loadAll();subscribe()}else{if(channel)sb.removeChannel(channel);$('auth').style.display='flex';$('main').style.display='none'}})}
