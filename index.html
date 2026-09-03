@@ -137,7 +137,7 @@ function whatsapp(id){
 }
 function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')}</b><br><small>${esc(x.service)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
-function openRevenue(){let ym=new Date().toISOString().slice(0,7),a=db.appointments.filter(x=>x.appointment_date.startsWith(ym)),t=a.reduce((n,x)=>n+Number(x.price||0),0);$('modalTitle').textContent='💰 Bu Ay';$('modalBody').innerHTML=`<div class="card"><small>Toplam ciro</small><h1>${t.toLocaleString('tr-TR')} ₺</h1><span class="muted">${a.length} işlem</span></div>`;$('modal').style.display='flex'}
+function openRevenue(){monthlyRevenue(0)}
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
 async function backup(){let filename='cabi-pet-kuafor-yedek-'+new Date().toISOString().slice(0,10)+'.json',blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),note:x.note||null})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;await loadAll();alert("Yedek başarıyla Supabase'e yüklendi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
@@ -145,40 +145,77 @@ function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHei
 function closeModal(){$('modal').style.display='none'}
 start();
 
-function monthlyRevenue(){
-  let now=new Date();
-  let year=now.getFullYear();
+function monthlyRevenue(offset=0){
+  let base=new Date();
+  let year=base.getFullYear()+offset;
+  let nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-  let rows=[];
-  let annualTotal=0;
-
+  let rows=[], annualTotal=0, annualCount=0;
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
     let total=appts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
-    annualTotal+=total;
-    rows.push({month:months[m],total,count:appts.length});
+    let days=new Set(appts.map(a=>a.appointment_date)).size;
+    rows.push({month:months[m],total,count:appts.length,days,avg:appts.length?total/appts.length:0});
+    annualTotal+=total; annualCount+=appts.length;
   }
+  let best=rows.reduce((a,b)=>b.total>a.total?b:a,rows[0]);
+  let annualAvg=annualCount?annualTotal/annualCount:0;
+  let services={};
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-')) return;
+    let n=(a.service||'Diğer').trim()||'Diğer';
+    services[n]=(services[n]||0)+(Number(a.price)||0);
+  });
+  let serviceRows=Object.entries(services).sort((a,b)=>b[1]-a[1]);
+  let maxMonth=Math.max(...rows.map(r=>r.total),1);
 
-  let html='<div class="modal"><div class="modalbox"><h2>💰 '+year+' Ciro</h2>'+
-    '<div style="font-size:14px;color:#718080;margin-top:-8px">Ay ay toplam ciro</div>'+
-    '<div style="font-size:30px;font-weight:700;margin:15px 0 18px">'+
-    annualTotal.toLocaleString('tr-TR',{minimumFractionDigits:0})+' ₺'+
-    '<div style="font-size:14px;font-weight:400;color:#718080;margin-top:4px">Yıllık toplam</div></div>'+
-    '<div style="max-height:52vh;overflow:auto">';
+  let html=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<div><h2 style="margin:0">💰 '+year+' Ciro</h2><div class="muted">Aylık gelir ve işlem özeti</div></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin:14px 0">'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset-1)+')">‹ '+(year-1)+'</button>'+
+      '<b style="font-size:18px">'+year+'</b>'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset+1)+')">'+(year+1)+' ›</button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+
+      '<div class="card"><small>Yıllık toplam</small><h2>'+annualTotal.toLocaleString('tr-TR')+' ₺</h2></div>'+
+      '<div class="card"><small>Toplam işlem</small><h2>'+annualCount+'</h2></div>'+
+      '<div class="card"><small>Ortalama işlem</small><h3>'+annualAvg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</h3></div>'+
+      '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
+    '</div>'+
+    '<h3 style="margin:18px 0 10px">📊 Ay Ay Detay</h3>';
 
   rows.forEach((r,i)=>{
-    let isCurrent=i===now.getMonth();
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 4px;border-bottom:1px solid #eee;'+
-      (isCurrent?'font-weight:700;background:#f1faf8;border-radius:10px;padding-left:10px;padding-right:10px;':'')+'">'+
-      '<div><span>'+r.month+'</span>'+
-      (isCurrent?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+
-      '<div style="font-size:12px;color:#718080;font-weight:400">'+r.count+' işlem</div></div>'+
-      '<b>'+r.total.toLocaleString('tr-TR')+' ₺</b></div>';
+    let current=year===nowYear && i===nowMonth;
+    let pct=annualTotal?r.total/annualTotal*100:0;
+    let bar=r.total/maxMonth*100;
+    html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b>'+
+        '<div class="muted">'+r.count+' işlem · '+r.days+' aktif gün · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
+        '<b style="font-size:18px;white-space:nowrap">'+r.total.toLocaleString('tr-TR')+' ₺</b>'+
+      '</div>'+
+      '<div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div>'+
+      '<div class="muted" style="font-size:11px;margin-top:4px">'+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'% yıllık ciro</div>'+
+    '</div>';
   });
 
-  html+='</div><button class="btn" onclick="closeModal()">Kapat</button></div></div>';
-  document.body.insertAdjacentHTML('beforeend',html);
+  if(serviceRows.length){
+    html+='<h3 style="margin:18px 0 10px">✂️ Hizmet Bazında Ciro</h3>';
+    serviceRows.forEach(([name,total])=>{
+      let pct=annualTotal?total/annualTotal*100:0;
+      html+='<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #eee">'+
+        '<span>'+name+' <small class="muted">('+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span>'+
+        '<b>'+total.toLocaleString('tr-TR')+' ₺</b></div>';
+    });
+  }
+
+  html+='<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
+  $('modalTitle').textContent='💰 Ciro';
+  $('modalBody').innerHTML=html;
+  $('modal').style.display='flex';
 }
 </script>
 </body></html>
