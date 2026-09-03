@@ -122,11 +122,15 @@ function whatsapp(id){
   let date=upcoming._dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
   let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
   let nl=String.fromCharCode(10);
+  let mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('Cabi Pet Kuaför, Topselvi, Yüce Sk. No:14, 34862 Kartal/İstanbul');
+
   let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması 🐾'+nl+nl+
     '🐾 '+c.pet_name+nl+
     '📅 Tarih: '+date+nl+
     (time?'⏰ Saat: '+time+nl:'')+
-    nl+'Görüşmek üzere. 🐾\n\n📍 Cabi Pet Kuaför\n🗺️ Konum: https://www.google.com/maps/search/?api=1&query=Cabi%20Pet%20Kuaf%C3%B6r%2C%20Topselvi%2C%20Y%C3%BCce%20Sk.%20No%3A14%2C%2034862%20Kartal%2F%C4%B0stanbul';
+    nl+'Görüşmek üzere. 🐾'+nl+nl+
+    '📍 Cabi Pet Kuaför'+nl+
+    '🗺️ Konum: '+mapUrl;
 
   location.href='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
 }
