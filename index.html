@@ -8,6 +8,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#173535;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}.app{max-width:500px;margin:auto;min-height:100vh;padding:20px 16px 100px}h1{margin:5px 0;font-size:27px}.muted{color:#71807f}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.btn{border:0;border-radius:17px;padding:16px 12px;font-weight:700;font-size:15px;background:#dff4ef;color:#174b45}.primary{background:#15947f;color:#fff}.card{background:#fff;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 3px 14px #0000000a}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 0;border-bottom:1px solid #edf1f0}.row:last-child{border:0}.tag{background:#eef7f5;padding:7px 10px;border-radius:10px;font-size:12px}.section{font-weight:800;font-size:19px;margin:22px 2px 10px}input,select,textarea{width:100%;padding:14px;border:1px solid #dce5e3;border-radius:13px;font-size:16px;margin:5px 0 10px;background:#fff}label{font-size:13px;font-weight:700}.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:5}.sheet{background:#f7f9f8;width:100%;max-width:500px;margin:auto;border-radius:24px 24px 0 0;padding:20px;max-height:92vh;overflow:auto}.sheet h2{margin:0 0 15px}.actions{display:flex;gap:10px}.actions button{flex:1}.danger{background:#ffe8e8;color:#a33}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e7eceb;padding:9px 4px;display:flex;justify-content:space-around;z-index:4}.nav button{border:0;background:none;color:#657574;font-size:11px}.nav b{display:block;font-size:20px;margin-bottom:2px}.empty{padding:15px 0;color:#748381}.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:25px}.auth .card{width:100%;max-width:420px}.status{font-size:12px;margin-top:8px}.success{color:#14866f}.error{color:#b33}.logout{float:right;border:0;background:#eef7f5;border-radius:10px;padding:7px 10px}
+
+@media (min-width: 900px){
+  body{background:#eef3f2}
+  .app{max-width:1180px;padding:32px 36px 110px}
+  .app>h1{font-size:32px}
+  .grid{grid-template-columns:repeat(6,1fr);gap:14px;margin:26px 0}
+  .grid .btn{min-height:92px;font-size:15px}
+  #appointments.card,#customers.card{padding:22px}
+  .section{font-size:21px}
+  #customers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
+  #customers .row{padding:15px 4px}
+  .nav{max-width:1180px;left:50%;right:auto;transform:translateX(-50%);border:1px solid #e2e9e7;border-radius:18px 18px 0 0;padding:10px 18px}
+  .modal{align-items:center}
+  .sheet{max-width:760px;border-radius:24px;max-height:88vh}
+}
+
 </style>
 </head>
 <body>
