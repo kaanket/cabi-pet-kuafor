@@ -35,7 +35,8 @@
 <div class="section">Müşteri Ara</div>
 <div class="card"><input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı"><div id="customers"></div></div>
 </div>
-<div class="nav"><button onclick="location.reload()"><b>⌂</b>Ana Sayfa</button><button onclick="openAppt()"><b>📅</b>Randevu</button><button onclick="focusSearch()"><b>🐾</b>Müşteriler</button><button onclick="openSettings()"><b>⚙️</b>Ayarlar</button></div></div>
+<div class="nav"><button class="btn" onclick="monthlyRevenue()">💰 Aylık Ciro</button>
+<button onclick="location.reload()"><b>⌂</b>Ana Sayfa</button><button onclick="openAppt()"><b>📅</b>Randevu</button><button onclick="focusSearch()"><b>🐾</b>Müşteriler</button><button onclick="openSettings()"><b>⚙️</b>Ayarlar</button></div></div>
 
 <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet"><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
 
@@ -143,5 +144,33 @@ async function restoreBackup(file){if(!file)return;try{let text=await file.text(
 function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 function closeModal(){$('modal').style.display='none'}
 start();
+
+function monthlyRevenue(){
+  let now=new Date();
+  let year=now.getFullYear(), month=now.getMonth();
+  let rows=[];
+  for(let d=1;d<=31;d++){
+    let dt=new Date(year,month,d);
+    if(dt.getMonth()!==month) break;
+    let key=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    let total=db.appointments
+      .filter(a=>a.appointment_date===key)
+      .reduce((sum,a)=>sum+(Number(a.price)||0),0);
+    if(total>0) rows.push({date:dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}),total});
+  }
+  let total=rows.reduce((sum,r)=>sum+r.total,0);
+  let title=now.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+  let html='<div class="modal"><div class="modalbox"><h2>💰 '+title+' Ciro</h2>'+
+    '<div style="font-size:30px;font-weight:700;margin:15px 0">'+total.toLocaleString('tr-TR',{minimumFractionDigits:0})+' ₺</div>';
+  if(rows.length){
+    html+='<div style="max-height:45vh;overflow:auto">';
+    rows.forEach(r=>html+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee"><span>'+r.date+'</span><b>'+r.total.toLocaleString('tr-TR')+' ₺</b></div>');
+    html+='</div>';
+  }else{
+    html+='<p>Bu ay henüz ciro kaydı yok.</p>';
+  }
+  html+='<button class="btn" onclick="closeModal()">Kapat</button></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
 </script>
 </body></html>
