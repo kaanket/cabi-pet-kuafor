@@ -104,7 +104,31 @@ async function confirmDeleteCustomer(id){
   await loadAll();
 }
 async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
-function whatsapp(id){let c=db.customers.find(x=>x.id===id),ph=(c.phone||'').replace(/\D/g,'');if(ph.startsWith('0'))ph='90'+ph.slice(1);if(!ph)return alert('Telefon numarası kayıtlı değil.');location.href='https://wa.me/'+ph+'?text='+encodeURIComponent('Merhaba '+c.owner_name+', Cabi Pet Kuaför randevunuz için hatırlatma. 🐾')}
+function whatsapp(id){
+  let c=db.customers.find(x=>x.id===id);
+  let ph=(c?.phone||'').replace(/\D/g,'');
+  if(ph.startsWith('0'))ph='90'+ph.slice(1);
+  if(!ph)return alert('Telefon numarası kayıtlı değil.');
+
+  let now=new Date();
+  let upcoming=db.appointments
+    .filter(a=>a.customer_id===id && a.appointment_date)
+    .map(a=>({...a,_dt:new Date(a.appointment_date+'T'+(a.appointment_time||'23:59'))}))
+    .filter(a=>a._dt>=now)
+    .sort((a,b)=>a._dt-b._dt)[0];
+
+  if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
+
+  let date=upcoming._dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
+  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması 🐾\\n\\n'+
+    '🐾 '+c.pet_name+'\\n'+
+    '📅 Tarih: '+date+'\\n'+
+    (time?'⏰ Saat: '+time+'\\n':'')+
+    '\\nGörüşmek üzere. 🐾';
+
+  location.href='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
+}
 function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')}</b><br><small>${esc(x.service)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
 function openRevenue(){let ym=new Date().toISOString().slice(0,7),a=db.appointments.filter(x=>x.appointment_date.startsWith(ym)),t=a.reduce((n,x)=>n+Number(x.price||0),0);$('modalTitle').textContent='💰 Bu Ay';$('modalBody').innerHTML=`<div class="card"><small>Toplam ciro</small><h1>${t.toLocaleString('tr-TR')} ₺</h1><span class="muted">${a.length} işlem</span></div>`;$('modal').style.display='flex'}
