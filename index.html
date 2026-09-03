@@ -147,29 +147,37 @@ start();
 
 function monthlyRevenue(){
   let now=new Date();
-  let year=now.getFullYear(), month=now.getMonth();
+  let year=now.getFullYear();
+  let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let rows=[];
-  for(let d=1;d<=31;d++){
-    let dt=new Date(year,month,d);
-    if(dt.getMonth()!==month) break;
-    let key=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    let total=db.appointments
-      .filter(a=>a.appointment_date===key)
-      .reduce((sum,a)=>sum+(Number(a.price)||0),0);
-    if(total>0) rows.push({date:dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}),total});
+  let annualTotal=0;
+
+  for(let m=0;m<12;m++){
+    let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
+    let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
+    let total=appts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
+    annualTotal+=total;
+    rows.push({month:months[m],total,count:appts.length});
   }
-  let total=rows.reduce((sum,r)=>sum+r.total,0);
-  let title=now.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
-  let html='<div class="modal"><div class="modalbox"><h2>💰 '+title+' Ciro</h2>'+
-    '<div style="font-size:30px;font-weight:700;margin:15px 0">'+total.toLocaleString('tr-TR',{minimumFractionDigits:0})+' ₺</div>';
-  if(rows.length){
-    html+='<div style="max-height:45vh;overflow:auto">';
-    rows.forEach(r=>html+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee"><span>'+r.date+'</span><b>'+r.total.toLocaleString('tr-TR')+' ₺</b></div>');
-    html+='</div>';
-  }else{
-    html+='<p>Bu ay henüz ciro kaydı yok.</p>';
-  }
-  html+='<button class="btn" onclick="closeModal()">Kapat</button></div></div>';
+
+  let html='<div class="modal"><div class="modalbox"><h2>💰 '+year+' Ciro</h2>'+
+    '<div style="font-size:14px;color:#718080;margin-top:-8px">Ay ay toplam ciro</div>'+
+    '<div style="font-size:30px;font-weight:700;margin:15px 0 18px">'+
+    annualTotal.toLocaleString('tr-TR',{minimumFractionDigits:0})+' ₺'+
+    '<div style="font-size:14px;font-weight:400;color:#718080;margin-top:4px">Yıllık toplam</div></div>'+
+    '<div style="max-height:52vh;overflow:auto">';
+
+  rows.forEach((r,i)=>{
+    let isCurrent=i===now.getMonth();
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 4px;border-bottom:1px solid #eee;'+
+      (isCurrent?'font-weight:700;background:#f1faf8;border-radius:10px;padding-left:10px;padding-right:10px;':'')+'">'+
+      '<div><span>'+r.month+'</span>'+
+      (isCurrent?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+
+      '<div style="font-size:12px;color:#718080;font-weight:400">'+r.count+' işlem</div></div>'+
+      '<b>'+r.total.toLocaleString('tr-TR')+' ₺</b></div>';
+  });
+
+  html+='</div><button class="btn" onclick="closeModal()">Kapat</button></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
 }
 </script>
