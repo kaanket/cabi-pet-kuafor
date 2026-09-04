@@ -122,11 +122,6 @@ async function confirmDeleteCustomer(id){
 }
 async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
 function whatsapp(id){
-  const paw=String.fromCodePoint(0x1F43E);
-  const cal=String.fromCodePoint(0x1F4C5);
-  const clock=String.fromCodePoint(0x23F0);
-  const pin=String.fromCodePoint(0x1F4CD);
-  const map=String.fromCodePoint(0x1F5FA,0xFE0F);
   let c=db.customers.find(x=>x.id===id);
   let ph=(c?.phone||'').replace(/\D/g,'');
   if(ph.startsWith('0'))ph='90'+ph.slice(1);
@@ -142,24 +137,32 @@ function whatsapp(id){
   if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
 
   let date=upcoming._dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
+  let time=upcoming.appointment_time?String(upcoming.appointment_time).slice(0,5):'';
   let nl=String.fromCharCode(10);
   let mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('Cabi Pet Kuaför, Topselvi, Yüce Sk. No:14, 34862 Kartal/İstanbul');
 
-  // Emojileri Unicode escape ile oluşturuyoruz; MacBook/Safari -> WhatsApp aktarımında bozulmaz.
-  const calendar='\uD83D\uDCC5';
-  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+
-    paw+' '+c.pet_name+nl+
-    calendar+' Tarih: '+date+nl+
-    (time?clock+' Saat: '+time+nl:'')+
-    nl+'Görüşmek üzere. '+paw+nl+nl+
-    pin+' Cabi Pet Kuaför'+nl+
-    map+' Konum: '+mapUrl;
+  // Emoji karakterlerini URL'ye hiç bırakmadan, UTF-8 byte dizileri olarak ekliyoruz.
+  // Böylece Safari -> WhatsApp Web aktarımında karakter bozulması olmaz.
+  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması [PAW]'+nl+nl+
+    '[PAW] '+c.pet_name+nl+
+    '[CAL] Tarih: '+date+nl+
+    (time?'[CLOCK] Saat: '+time+nl:'')+
+    nl+'Görüşmek üzere. [PAW]'+nl+nl+
+    '[PIN] Cabi Pet Kuaför'+nl+
+    '[MAP] Konum: '+mapUrl;
 
-  const waUrl='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(text);
+  let encoded=encodeURIComponent(text)
+    .replace(/%5BPAW%5D/g,'%F0%9F%90%BE')
+    .replace(/%5BCAL%5D/g,'%F0%9F%93%85')
+    .replace(/%5BCLOCK%5D/g,'%E2%8F%B0')
+    .replace(/%5BPIN%5D/g,'%F0%9F%93%8D')
+    .replace(/%5BMAP%5D/g,'%F0%9F%97%BA%EF%B8%8F');
+
+  const waUrl='https://web.whatsapp.com/send?phone='+ph+'&text='+encoded;
   window.open(waUrl,'_blank');
+}
 
-}function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
+function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')}</b><br><small>${esc(x.service)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
 function openRevenue(){monthlyRevenue(0)}
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
