@@ -145,7 +145,7 @@ function whatsapp(id){
   const paw='\uD83D\uDC3E';
   const calendar='\uD83D\uDCC5';
   const clock='\u23F0';
-  const pin='\uD83D\DCCD';
+  const pin='\uD83D\uDCCD';
   const map='\uD83D\uDDFA\uFE0F';
   let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+
     paw+' '+c.pet_name+nl+
@@ -155,7 +155,8 @@ function whatsapp(id){
     pin+' Cabi Pet Kuaför'+nl+
     map+' Konum: '+mapUrl;
 
-  location.href='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
+  const waUrl='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(text);
+  window.open(waUrl,'_blank');
 }
 function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')}</b><br><small>${esc(x.service)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
