@@ -155,13 +155,10 @@ function whatsapp(id){
     pin+' Cabi Pet Kuaför'+nl+
     map+' Konum: '+mapUrl;
 
-  const appUrl='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
-  const webUrl='https://web.whatsapp.com/send?phone='+ph+'&text='+encodeURIComponent(text);
-  const fallback=setTimeout(()=>window.open(webUrl,'_blank'),1500);
-  window.location.href=appUrl;
-  window.addEventListener('pagehide',()=>clearTimeout(fallback),{once:true});
-}
-function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
+  const waUrl='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
+  window.location.href=waUrl;
+
+}function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')}</b><br><small>${esc(x.service)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
 function openRevenue(){monthlyRevenue(0)}
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
