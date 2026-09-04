@@ -156,7 +156,8 @@ function whatsapp(id){
     pin+' Cabi Pet Kuaför'+nl+
     map+' Konum: '+mapUrl;
 
-  const waUrl='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
+  const utf8Text=encodeURIComponent(text);
+  const waUrl='https://wa.me/'+ph+'?text='+utf8Text;
   window.location.href=waUrl;
 
 }function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
