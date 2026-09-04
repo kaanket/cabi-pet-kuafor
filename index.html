@@ -174,7 +174,14 @@ function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('
 async function confirmDeleteCustomer(id){
   let c=db.customers.find(x=>x.id===id);
   if(!c)return;
-  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\n\n'+c.pet_name+' — '+c.owner_name))return;
+  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\\n\\n'+c.pet_name+' — '+c.owner_name))return;
+
+  // Müşteri silinse bile geçmiş randevular ve ciro kaydı silinmesin.
+  // Önce randevuların müşteri bağlantısını kaldırıyoruz; böylece
+  // customers -> appointments ON DELETE CASCADE devreye girmez.
+  let{error:ae}=await sb.from('appointments').update({customer_id:null}).eq('customer_id',id);
+  if(ae)return alert('Müşteri silinemedi: '+ae.message);
+
   let{error}=await sb.from('customers').delete().eq('id',id);
   if(error)return alert(error.message);
   closeModal();
