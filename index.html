@@ -231,7 +231,7 @@ function renderFreeSlots(date){
   let occupied={};
   a.forEach(x=>{let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
   let rows='';
-  for(let h=9;h<=22;h++){
+  for(let h=9;h<22;h++){for(let m of [0,30]){
     let t=String(h).padStart(2,'0')+':00',x=occupied[t],c=x?db.customers.find(c=>c.id===x.customer_id):null;
     if(x){
       rows+=`<div class="row" style="background:#fff0f0;border-radius:12px;padding:12px;margin:6px 0"><div><b>🔴 ${t} · Dolu</b><br><small>${petTypeLabel(c)} · ${esc(c?.pet_name||'')} · ${esc(c?.owner_name||'')}</small></div><button class="btn" style="padding:8px 12px" onclick="editAppt('${x.id}')">Düzenle</button></div>`;
