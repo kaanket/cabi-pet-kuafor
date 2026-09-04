@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#15947f">
+<title>Cabi Pet Kuaför</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#173535;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}.app{max-width:500px;margin:auto;min-height:100vh;padding:20px 16px 100px}h1{margin:5px 0;font-size:27px}.muted{color:#71807f}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.btn{border:0;border-radius:17px;padding:16px 12px;font-weight:700;font-size:15px;background:#dff4ef;color:#174b45}.primary{background:#15947f;color:#fff}.card{background:#fff;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 3px 14px #0000000a}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 0;border-bottom:1px solid #edf1f0}.row:last-child{border:0}.tag{background:#eef7f5;padding:7px 10px;border-radius:10px;font-size:12px}.section{font-weight:800;font-size:19px;margin:22px 2px 10px}input,select,textarea{width:100%;padding:14px;border:1px solid #dce5e3;border-radius:13px;font-size:16px;margin:5px 0 10px;background:#fff}label{font-size:13px;font-weight:700}.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:5}.sheet{background:#f7f9f8;width:100%;max-width:500px;margin:auto;border-radius:24px 24px 0 0;padding:20px;max-height:92vh;overflow:auto}.sheet h2{margin:0 0 15px}.actions{display:flex;gap:10px}.actions button{flex:1}.danger{background:#ffe8e8;color:#a33}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e7eceb;padding:9px 4px;display:flex;justify-content:space-around;z-index:4}.nav button{border:0;background:none;color:#657574;font-size:11px}.nav b{display:block;font-size:20px;margin-bottom:2px}.empty{padding:15px 0;color:#748381}.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:25px}.auth .card{width:100%;max-width:420px}.status{font-size:12px;margin-top:8px}.success{color:#14866f}.error{color:#b33}.logout{float:right;border:0;background:#eef7f5;border-radius:10px;padding:7px 10px}
+
+@media (min-width: 900px){
+  body{background:#eef3f2}
+  .app{max-width:1180px;padding:32px 36px 110px}
+  .app>h1{font-size:32px}
+  .grid{grid-template-columns:repeat(6,1fr);gap:14px;margin:26px 0}
+  .grid .btn{min-height:92px;font-size:15px}
+  #appointments.card,#customers.card{padding:22px}
+  .section{font-size:21px}
+  #customers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
+  #customers .row{padding:15px 4px}
+  .nav{max-width:1180px;left:50%;right:auto;transform:translateX(-50%);border:1px solid #e2e9e7;border-radius:18px 18px 0 0;padding:10px 18px}
+  .modal{align-items:center}
+  .sheet{max-width:760px;border-radius:24px;max-height:88vh}
+}
+
+
+.appt-tabs{display:flex;gap:7px;margin:10px 0}.appt-tabs button{flex:1;padding:10px;border:1px solid #dce5e3;background:#fff;border-radius:12px;font-weight:700;color:#174b45}.appt-tabs button.active{background:#15947f;color:#fff;border-color:#15947f}.appt-week{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto;padding-bottom:6px}.appt-day{background:#f8fbfa;border:1px solid #e2eae8;border-radius:14px;min-height:300px;padding:8px}.appt-day-head{font-weight:800;text-align:center;padding:6px;border-bottom:1px solid #e5ecea;margin-bottom:6px}.appt-slot{min-height:54px;border:1px dashed #dce5e3;border-radius:10px;margin:5px 0;padding:5px}.appt-card{background:#fff;border:1px solid #dfe8e6;border-radius:10px;padding:7px;cursor:grab;box-shadow:0 2px 8px #0000000a}.appt-card:active{cursor:grabbing}.appt-card small{display:block;color:#71807f}.status-select{border:0!important;margin:0!important;padding:7px 9px!important;width:auto!important;font-size:12px!important;font-weight:700}.status-bekliyor{background:#fff4d6!important}.status-geldi{background:#e5f3ff!important}.status-islemde{background:#eee8ff!important}.status-tamamlandi{background:#e3f7ed!important}.status-gelmedi{background:#ffe8e8!important}.appt-day-drop{min-height:44px}.appt-month{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.month-cell{min-height:78px;background:#fff;border:1px solid #e4ebe9;border-radius:10px;padding:6px;cursor:pointer}.month-cell b{font-size:12px}.month-cell .mini{font-size:11px;margin-top:4px}.month-cell.today{border:2px solid #159b89}.month-title{display:flex;justify-content:space-between;align-items:center;margin:10px 0}.drag-hint{font-size:11px;color:#71807f;margin:5px 0 10px}
+@media(max-width:899px){.appt-week{grid-template-columns:repeat(7,150px)}.appt-month{min-width:650px}.month-wrap{overflow-x:auto}}
+</style>
+</head>
+<body>
+<div id="auth" class="auth"><div class="card">
+<h1>🐾 Cabi Pet Kuaför</h1><p class="muted">Bulut randevu defteri</p>
+<label>E-posta</label><input id="email" type="email" autocomplete="email" placeholder="ornek@mail.com">
+<label>Şifre</label><input id="password" type="password" autocomplete="current-password" placeholder="En az 6 karakter">
+<div class="actions"><button class="btn primary" onclick="login()">Giriş Yap</button><button class="btn" onclick="signup()">Kayıt Ol</button></div>
+<div id="authMsg" class="status"></div>
+</div></div>
+
+<div id="main" style="display:none"><div class="app">
+<button class="logout" onclick="logout()">Çıkış</button>
+<h1>🐾 Cabi Pet Kuaför</h1><div class="muted">Randevu · Müşteri · İşlem Geçmişi</div>
+<div class="grid">
+<button class="btn primary" onclick="openAppt()">➕<br>Yeni Randevu</button>
+<button class="btn" onclick="openCustomer()">👤<br>Yeni Müşteri</button>
+<button class="btn" onclick="focusSearch()">🔍<br>Müşteri Ara</button>
+<button class="btn" onclick="openCalendar()">🗓️<br>Takvim</button>
+<button class="btn" onclick="openFreeSlots()">🟢<br>Boş Saatler</button>
+<button class="btn" onclick="openRevenue()">💰<br>Ciro</button>
+<button class="btn" onclick="openSettings()">⚙️<br>Ayarlar</button>
+</div>
+<div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
+<div id="appointments" class="card"></div>
+<div class="section">📲 Yarınki Randevular <span id="tomorrowCount" class="muted"></span></div>
+<div id="tomorrowAppointments" class="card"></div>
+<div class="section">Müşteri Ara</div>
+<div class="card"><input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı"><div id="customers"></div></div>
+</div>
+<div class="nav"><button class="btn" onclick="monthlyRevenue()">💰 Aylık Ciro</button>
+<button onclick="location.reload()"><b>⌂</b>Ana Sayfa</button><button onclick="openAppt()"><b>📅</b>Randevu</button><button onclick="focusSearch()"><b>🐾</b>Müşteriler</button><button onclick="openSettings()"><b>⚙️</b>Ayarlar</button></div></div>
+
+<div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet"><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>
+
+<script>
+const SUPABASE_URL='https://ibypczlxqhrrownltryc.supabase.co';
+const SUPABASE_KEY='sb_publishable_zh2dVONzQFc2hTpAfCKuXg_hnfSOsTo';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let db={customers:[],appointments:[]},channel=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
+function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
+async function login(){let email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('E-posta ve şifre gerekli.');msg('Giriş yapılıyor...',true);let{data,error}=await sb.auth.signInWithPassword({email,password});if(error)return msg(error.message);showApp();await loadAll();subscribe()}
+async function signup(){let email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6)return msg('Geçerli e-posta ve en az 6 karakter şifre gir.');let{data,error}=await sb.auth.signUp({email,password});if(error)return msg(error.message);msg(data.session?'Kayıt tamamlandı.':'Kayıt tamamlandı. E-postanı doğrula, sonra giriş yap.',true)}
+async function logout(){await sb.auth.signOut()}
+async function start(){let{data:{session}}=await sb.auth.getSession();if(session){showApp();await loadAll();subscribe()}else{$('auth').style.display='flex';$('main').style.display='none'}sb.auth.onAuthStateChange(async(_e,s)=>{if(s){showApp();await loadAll();subscribe()}else{if(channel)sb.removeChannel(channel);$('auth').style.display='flex';$('main').style.display='none'}})}
+function showApp(){$('auth').style.display='none';$('main').style.display='block'}
+async function loadAll(){let c=await sb.from('customers').select('*').order('created_at',{ascending:false});let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});if(c.error||a.error){alert((c.error||a.error).message);return}db.customers=c.data||[];db.appointments=a.data||[];render()}
+function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).subscribe()}
+function render(){renderAppts();renderTomorrow();renderCustomers()}
+function renderAppts(){let d=new Date().toISOString().slice(0,10),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}</b><br><small>🐾 ${esc(c.pet_name||'')} · ${esc(x.service)}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
+function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
+function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}</b><br><small>🐾 ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn primary" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
+function renderCustomers(){let q=($('search').value||'').trim().toLowerCase();if(!q){$('customers').innerHTML='<div class="empty">Müşteri aramak için isim, telefon veya hayvan adı yazın.</div>';return}let c=db.customers.filter(x=>(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).toLowerCase().includes(q)).slice(0,20);$('customers').innerHTML=c.length?c.map(x=>`<div class="row"><div><b>${esc(x.owner_name)}</b><br><small>🐾 ${esc(x.pet_name)} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small></div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
+function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="breed" placeholder="Toy Poodle"><label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
+async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:$('breed').value,weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
+function statusClass(s){return 'status-'+String(s||'Bekliyor').toLowerCase().replace('ı','i').replace('ş','s').replace('ü','u').replace('ö','o').replace('ğ','g').replace('ç','c').replaceAll(' ','')}
+function statusLabel(s){return s||'Bekliyor'}
+function apptStatusOptions(selected){return ['Bekliyor','Geldi','Gelmedi'].map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
+function checkConflict(date,time,ignoreId=''){
+  if(!date||!time)return null;
+  return db.appointments.find(a=>a.id!==ignoreId&&a.appointment_date===date&&(a.appointment_time||'').slice(0,5)===(time||'').slice(0,5));
+}
+function goHome(){closeModal();window.scrollTo({top:0,behavior:'smooth'});}
+function openAppt(){
+  $('modalTitle').textContent='Yeni Randevu';
+  $('modalBody').innerHTML=`<label>Müşteri / Hayvan Ara</label>
+  <input id="apptSearch" type="search" placeholder="İsim, telefon veya hayvan adı yaz..." oninput="filterApptCustomers()">
+  <input id="cid" type="hidden"><div id="apptResults" class="card" style="margin:8px 0 14px;padding:0;max-height:190px;overflow:auto"></div>
+  <div id="newApptCustomer" style="display:none" class="card">
+    <b>➕ Yeni Müşteri Bilgileri</b>
+    <label>Sahip adı</label><input id="newOwner" placeholder="Ad Soyad">
+    <label>Telefon</label><input id="newPhone" type="tel" placeholder="05xx xxx xx xx">
+    <label>Hayvan adı</label><input id="newPet" placeholder="Boncuk">
+    <label>Tür</label><select id="newType"><option>Köpek</option><option>Kedi</option></select>
+    <label>Irk</label><input id="newBreed" placeholder="Toy Poodle">
+    <label>Kilo (kg)</label><input id="newWeight" type="number" step=".1">
+    <label>Özel not</label><textarea id="newNote" placeholder="Kesim şekli, davranış, özel istek..."></textarea>
+  </div>
+  <div id="apptSelected" class="muted" style="margin-bottom:14px">Müşteri seçilmedi.</div>
+  <label>Tarih</label><input id="date" type="date" value="${new Date().toISOString().slice(0,10)}">
+  <label>Saat</label><input id="time" type="time" value="10:00">
+  <label>İşlem</label><select id="service"><option>Tıraş</option><option>Hijyen & Banyo</option><option>Kıtık açma</option><option>Tırnak / bakım</option></select>
+  <label>Ücret (₺)</label><input id="price" type="number" placeholder="Ücreti girin">
+  <label>Durum</label><select id="status"><option>Bekliyor</option><option>Geldi</option><option>Gelmedi</option></select>
+  <label>Not</label><textarea id="anote"></textarea><div class="actions"><button class="btn primary" onclick="addAppt()">Randevuyu Kaydet</button><button class="btn" onclick="goHome()">Ana Ekrana Dön</button></div>`;
+  $('modal').style.display='flex';filterApptCustomers();
+}
+function showNewApptCustomer(){
+  $('newApptCustomer').style.display='block';
+  $('apptSelected').textContent='Yeni müşteri kaydedilecek.';
+  $('cid').value='';
+  const q=($('apptSearch').value||'').trim();
+  if(q && !$('newOwner').value) $('newOwner').value=q;
+}
+function filterApptCustomers(){
+  let q=($('apptSearch').value||'').toLowerCase().trim();
+  let c=db.customers.filter(x=>(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).toLowerCase().includes(q)).slice(0,30);
+  $('apptResults').innerHTML=(c.length?c.map(x=>`<div class="row" style="cursor:pointer" onclick="selectApptCustomer('${x.id}')"><div><b>${esc(x.owner_name)}</b><br><small>🐾 ${esc(x.pet_name)} · ${esc(x.phone||'')} · ${esc(x.breed||'Irk yok')}</small></div><span>Seç</span></div>`).join(''):'<div class="empty">Müşteri bulunamadı.</div>')+`<button class="btn" style="width:100%;margin-top:8px" onclick="showNewApptCustomer()">➕ Yeni Müşteri Bilgileri Gir</button>`;
+}
+function selectApptCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('cid').value=id;$('apptSelected').innerHTML=`<b>Seçilen:</b> ${esc(c.pet_name)} — ${esc(c.owner_name)} ${c.phone?`· ${esc(c.phone)}`:''}`;$('apptSearch').value='';$('apptResults').innerHTML=''}
+async function addAppt(){
+  let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  let cid=$('cid').value;
+  if(!cid){
+    let owner=$('newOwner')?.value.trim(),phone=$('newPhone')?.value.trim(),pet=$('newPet')?.value.trim(),type=$('newType')?.value,breed=$('newBreed')?.value.trim(),weight=$('newWeight')?.value,note=$('newNote')?.value.trim();
+    if(!owner||!pet)return alert('Yeni müşteri için sahip adı ve hayvan adı gerekli.');
+    let{data:c,error:ce}=await sb.from('customers').insert({owner_id:user.id,owner_name:owner,phone,pet_name:pet,pet_type:type,breed,weight:weight?Number(weight):null,note}).select().single();
+    if(ce)return alert(ce.message);cid=c.id;
+  }
+  let conflict=checkConflict($('date').value,$('time').value);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de kaydedilsin mi?'))return;}
+  let{error}=await sb.from('appointments').insert({owner_id:user.id,customer_id:cid,appointment_date:$('date').value,appointment_time:$('time').value,service:$('service').value,price:Number($('price').value||0),note:$('anote').value,status:$('status').value});
+  if(error)return alert(error.message);closeModal();await loadAll()
+}
+function editAppt(id){let a=db.appointments.find(x=>x.id===id),opts=db.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${esc(x.owner_name)} — ${esc(x.pet_name)}</option>`).join('');$('modalTitle').textContent='Randevuyu Düzenle';$('modalBody').innerHTML=`<label>Müşteri</label><select id="ecid">${opts}</select><label>Tarih</label><input id="edate" type="date" value="${a.appointment_date}"><label>Saat</label><input id="etime" type="time" value="${(a.appointment_time||'').slice(0,5)}"><label>İşlem</label><select id="eservice"><option>Tıraş</option><option>Hijyen & Banyo</option><option>Kıtık açma</option><option>Tırnak / bakım</option></select><label>Ücret</label><input id="eprice" type="number" value="${a.price||0}"><label>Durum</label><select id="estatus">${apptStatusOptions(a.status)}</select><label>Not</label><textarea id="enote">${esc(a.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateAppt('${id}')">Kaydet</button><button class="btn danger" onclick="deleteAppt('${id}')">Sil</button><button class="btn" onclick="goHome()">Ana Ekrana Dön</button></div>`;$('modal').style.display='flex';$('eservice').value=a.service}
+async function updateAppt(id){let c=db.customers.find(x=>x.id===$('ecid').value);let conflict=checkConflict($('edate').value,$('etime').value,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de kaydedilsin mi?'))return;}let{error}=await sb.from('appointments').update({customer_id:c.id,appointment_date:$('edate').value,appointment_time:$('etime').value,service:$('eservice').value,price:Number($('eprice').value||0),note:$('enote').value,status:$('estatus').value}).eq('id',id);if(error)return alert(error.message);closeModal();await loadAll()}
+async function setApptStatus(id,status){let{error}=await sb.from('appointments').update({status}).eq('id',id);if(error)return alert(error.message);await loadAll()}
+async function moveAppt(id,date,time){let conflict=checkConflict(date,time,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}let{error}=await sb.from('appointments').update({appointment_date:date,appointment_time:time}).eq('id',id);if(error)return alert(error.message);await loadAll();openCalendarView()}
+function appointmentCard(a,compact=false){let c=db.customers.find(x=>x.id===a.customer_id)||{};let st=a.status||'Bekliyor';return `<div class="appt-card" draggable="true" ondragstart="dragAppt(event,'${a.id}')" onclick="editAppt('${a.id}')"><b>${(a.appointment_time||'').slice(0,5)} · ${esc(c.owner_name||'')}</b><small>🐾 ${esc(c.pet_name||'')} · ${esc(a.service||'')}</small>${!compact?`<select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${a.id}',this.value)">${apptStatusOptions(st)}</select>`:''}</div>`}
+let draggedApptId='';function dragAppt(e,id){draggedApptId=id;e.dataTransfer.setData('text/plain',id)}
+function openCalendar(){openCalendarView()}
+function openCalendarView(mode='day',date=new Date().toISOString().slice(0,10)){let d=date;window.calMode=mode;window.calDate=d;$('modalTitle').textContent='Randevu Takvimi';$('modalBody').innerHTML=`<div class="appt-tabs"><button class="${mode==='day'?'active':''}" onclick="openCalendarView('day','${d}')">Gün</button><button class="${mode==='week'?'active':''}" onclick="openCalendarView('week','${d}')">Hafta</button><button class="${mode==='month'?'active':''}" onclick="openCalendarView('month','${d}')">Ay</button></div><input id="calDate" type="date" value="${d}" onchange="openCalendarView(window.calMode,this.value)"><div id="calView"></div>`;$('modal').style.display='flex';renderCalendarView()}
+function renderCalendarView(){let mode=window.calMode||'day',d=window.calDate||new Date().toISOString().slice(0,10);if(mode==='day')renderDayView(d);else if(mode==='week')renderWeekView(d);else renderMonthView(d)}
+function renderDayView(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));let slots='';for(let h=9;h<=20;h++){let t=String(h).padStart(2,'0')+':00';let aa=a.filter(x=>(x.appointment_time||'').slice(0,5)===t);slots+=`<div class="appt-slot" ondragover="event.preventDefault()" ondrop="dropAppt(event,'${d}','${t}')"><b>${t}</b>${aa.map(x=>appointmentCard(x)).join('')}</div>`}let dt=new Date(d+'T12:00:00');$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-1)">‹</button><b>${dt.toLocaleDateString('tr-TR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</b><button class="btn" onclick="shiftCal(1)">›</button></div><div class="drag-hint">Randevuyu sürükleyip başka saate bırakabilirsiniz.</div>${slots}`}
+function renderWeekView(d){let base=new Date(d+'T12:00:00');let day=base.getDay()||7;base.setDate(base.getDate()-day+1);let heads='',body='';for(let i=0;i<7;i++){let x=new Date(base);x.setDate(base.getDate()+i);let ds=x.toISOString().slice(0,10);heads+=`<div class="appt-day"><div class="appt-day-head">${x.toLocaleDateString('tr-TR',{weekday:'short'})}<br>${x.getDate()}.${x.getMonth()+1}</div>${Array.from({length:12},(_,j)=>{let t=String(j+9).padStart(2,'0')+':00';let aa=db.appointments.filter(a=>a.appointment_date===ds&&(a.appointment_time||'').slice(0,5)===t);return `<div class="appt-slot" ondragover="event.preventDefault()" ondrop="dropAppt(event,'${ds}','${t}')"><small>${t}</small>${aa.map(a=>appointmentCard(a,true)).join('')}</div>`}).join('')}</div>`}$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-7)">‹</button><b>Haftalık görünüm</b><button class="btn" onclick="shiftCal(7)">›</button></div><div class="drag-hint">Randevuyu sürükleyerek başka gün ve saate taşıyabilirsiniz.</div><div class="appt-week">${heads}</div>`}
+function renderMonthView(d){let dt=new Date(d+'T12:00:00'),y=dt.getFullYear(),m=dt.getMonth(),first=new Date(y,m,1),start=(first.getDay()||7)-1,last=new Date(y,m+1,0).getDate(),cells='';for(let i=0;i<start;i++)cells+='<div></div>';for(let n=1;n<=last;n++){let ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(n).padStart(2,'0'),aa=db.appointments.filter(a=>a.appointment_date===ds);cells+=`<div class="month-cell ${ds===new Date().toISOString().slice(0,10)?'today':''}" onclick="openCalendarView('day','${ds}')"><b>${n}</b><div class="mini">${aa.length?aa.length+' randevu':'—'}</div>${aa.slice(0,2).map(a=>`<div class="mini">${(a.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===a.customer_id)||{}).owner_name||'')}</div>`).join('')}</div>`}$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-30)">‹</button><b>${dt.toLocaleDateString('tr-TR',{month:'long',year:'numeric'})}</b><button class="btn" onclick="shiftCal(30)">›</button></div><div class="month-wrap"><div class="appt-month"><div><b>Pzt</b></div><div><b>Sal</b></div><div><b>Çar</b></div><div><b>Per</b></div><div><b>Cum</b></div><div><b>Cmt</b></div><div><b>Paz</b></div>${cells}</div></div>`}
+function shiftCal(days){let d=new Date((window.calDate||new Date().toISOString().slice(0,10))+'T12:00:00');d.setDate(d.getDate()+days);openCalendarView(window.calMode,d.toISOString().slice(0,10))}
+function dropAppt(e,date,time){e.preventDefault();let id=e.dataTransfer.getData('text/plain')||draggedApptId;if(id)moveAppt(id,date,time)}
+function detail(id){let c=db.customers.find(x=>x.id===id),h=db.appointments.filter(a=>a.customer_id===c.id).sort((a,b)=>(b.appointment_date+(b.appointment_time||'')).localeCompare(a.appointment_date+(a.appointment_time||'')));$('modalTitle').textContent=c.pet_name;$('modalBody').innerHTML=`<div class="card"><b>${esc(c.owner_name)}</b><br>📞 ${esc(c.phone||'')}<br>🐾 ${esc(c.pet_type||'')} · ${esc(c.breed||'')} · ${esc(c.weight||'')} kg<br><br>📝 ${esc(c.note||'Not yok')}</div><div class="actions"><button class="btn primary" onclick="editCustomer('${c.id}')">✏️ Bilgileri Güncelle</button><button class="btn" onclick="whatsapp('${c.id}')">WhatsApp</button><button class="btn danger" onclick="confirmDeleteCustomer('${c.id}')">🗑️ Müşteriyi Sil</button></div><h3>İşlem geçmişi</h3>${h.length?h.map(a=>`<div class="row"><span>${a.appointment_date} · ${esc(a.service)}<br><small>${esc(a.status||'Bekliyor')}</small></span><b>${Number(a.price||0).toLocaleString('tr-TR')} ₺</b></div>`).join(''):'<div class="empty">Henüz işlem yok.</div>'}<div class="actions"><button class="btn" onclick="closeModal()">Kapat</button></div>`;$('modal').style.display='flex'}
+function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('modalTitle').textContent='Müşteri Bilgilerini Güncelle';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="ucname" value="${esc(c.owner_name)}"><label>Telefon</label><input id="uphone" type="tel" value="${esc(c.phone||'')}"><label>Hayvan adı</label><input id="upet" value="${esc(c.pet_name)}"><label>Tür</label><select id="utype"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="ubreed" value="${esc(c.breed||'')}"><label>Kilo (kg)</label><input id="uweight" type="number" step=".1" value="${c.weight??''}"><label>Özel not</label><textarea id="unote">${esc(c.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateCustomer('${c.id}')">Kaydet</button><button class="btn" onclick="detail('${c.id}')">Vazgeç</button></div>`;$('modal').style.display='flex';$('utype').value=c.pet_type||'Köpek'}
+async function confirmDeleteCustomer(id){
+  let c=db.customers.find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\n\n'+c.pet_name+' — '+c.owner_name))return;
+  let{error}=await sb.from('customers').delete().eq('id',id);
+  if(error)return alert(error.message);
+  closeModal();
+  await loadAll();
+}
+async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
+function whatsappAppointment(apptId){
+  let upcoming=db.appointments.find(a=>a.id===apptId);
+  if(!upcoming)return alert('Randevu bulunamadı.');
+  let c=db.customers.find(x=>x.id===upcoming.customer_id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let ph=(c.phone||'').replace(/\D/g,'');
+  if(ph.startsWith('0'))ph='90'+ph.slice(1);
+  if(!ph)return alert('Telefon numarası kayıtlı değil.');
+  let date=new Date(upcoming.appointment_date+'T12:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
+  let nl=String.fromCharCode(10);
+  let mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('Cabi Pet Kuaför, Topselvi, Yüce Sk. No:14, 34862 Kartal/İstanbul');
+  const paw='\uD83D\uDC3E',calendar='\uD83D\uDCC5',clock='\u23F0',pin='\uD83D\uDCCD',map='\uD83D\uDDFA\uFE0F';
+  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Görüşmek üzere. '+paw+nl+nl+pin+' Cabi Pet Kuaför'+nl+map+' Konum: '+mapUrl;
+  window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(text),'_blank');
+}
+function whatsapp(id){
+  let c=db.customers.find(x=>x.id===id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let now=new Date();
+  let upcoming=db.appointments.filter(a=>a.customer_id===id&&a.appointment_date).map(a=>({...a,_dt:new Date(a.appointment_date+'T'+(a.appointment_time||'23:59'))})).filter(a=>a._dt>=now).sort((a,b)=>a._dt-b._dt)[0];
+  if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
+  whatsappAppointment(upcoming.id);
+}
+
+function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
+function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</b><br><small>🐾 ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')} · ${esc(x.service)}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
+function openFreeSlots(date=new Date().toISOString().slice(0,10)){
+  $('modalTitle').textContent='Boş Saatler';
+  $('modalBody').innerHTML=`<label>Tarih</label><input id="freeDate" type="date" value="${date}" onchange="renderFreeSlots(this.value)"><div id="freeSlots"></div>`;
+  $('modal').style.display='flex';
+  renderFreeSlots(date);
+}
+function renderFreeSlots(date){
+  let a=db.appointments.filter(x=>x.appointment_date===date);
+  let occupied={};
+  a.forEach(x=>{let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
+  let rows='';
+  for(let h=9;h<=22;h++){
+    let t=String(h).padStart(2,'0')+':00',x=occupied[t],c=x?db.customers.find(c=>c.id===x.customer_id):null;
+    if(x){
+      rows+=`<div class="row" style="background:#fff0f0;border-radius:12px;padding:12px;margin:6px 0"><div><b>🔴 ${t} · Dolu</b><br><small>🐾 ${esc(c?.pet_name||'')} · ${esc(c?.owner_name||'')}</small></div><button class="btn" style="padding:8px 12px" onclick="editAppt('${x.id}')">Düzenle</button></div>`;
+    }else{
+      rows+=`<div class="row" style="background:#eaf8f3;border-radius:12px;padding:12px;margin:6px 0"><div><b>🟢 ${t} · Boş</b></div><button class="btn primary" style="padding:8px 12px" onclick="newApptAt('${date}','${t}')">+ Randevu</button></div>`;
+    }
+  }
+  $('freeSlots').innerHTML=`<div class="card" style="margin-top:10px"><b>09:00 – 22:00 çalışma saatleri</b><div class="muted" style="margin-top:4px">Boş saatten direkt randevu oluşturabilirsin.</div></div>${rows}`;
+}
+function newApptAt(date,time){openAppt();setTimeout(()=>{if($('date'))$('date').value=date;if($('time'))$('time').value=time},0)}
+function openRevenue(){monthlyRevenue(0)}
+function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
+async function backup(){let filename='cabi-pet-kuafor-yedek-'+new Date().toISOString().slice(0,10)+'.json',blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),note:x.note||null})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;await loadAll();alert("Yedek başarıyla Supabase'e yüklendi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
+function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
+function closeModal(){$('modal').style.display='none'}
+start();
+
+function monthlyRevenue(offset=0){
+  let base=new Date();
+  let year=base.getFullYear()+offset;
+  let nowYear=base.getFullYear(), nowMonth=base.getMonth();
+  let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  let rows=[], annualTotal=0, annualCount=0;
+  for(let m=0;m<12;m++){
+    let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
+    let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
+    let total=appts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
+    let days=new Set(appts.map(a=>a.appointment_date)).size;
+    rows.push({month:months[m],total,count:appts.length,days,avg:appts.length?total/appts.length:0});
+    annualTotal+=total; annualCount+=appts.length;
+  }
+  let best=rows.reduce((a,b)=>b.total>a.total?b:a,rows[0]);
+  let annualAvg=annualCount?annualTotal/annualCount:0;
+  let services={};
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-')) return;
+    let n=(a.service||'Diğer').trim()||'Diğer';
+    services[n]=(services[n]||0)+(Number(a.price)||0);
+  });
+  let serviceRows=Object.entries(services).sort((a,b)=>b[1]-a[1]);
+  let maxMonth=Math.max(...rows.map(r=>r.total),1);
+
+  let html=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<div><h2 style="margin:0">💰 '+year+' Ciro</h2><div class="muted">Aylık gelir ve işlem özeti</div></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin:14px 0">'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset-1)+')">‹ '+(year-1)+'</button>'+
+      '<b style="font-size:18px">'+year+'</b>'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset+1)+')">'+(year+1)+' ›</button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+
+      '<div class="card"><small>Yıllık toplam</small><h2>'+annualTotal.toLocaleString('tr-TR')+' ₺</h2></div>'+
+      '<div class="card"><small>Toplam işlem</small><h2>'+annualCount+'</h2></div>'+
+      '<div class="card"><small>Ortalama işlem</small><h3>'+annualAvg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</h3></div>'+
+      '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
+    '</div>'+
+    '<h3 style="margin:18px 0 10px">📊 Ay Ay Detay</h3>';
+
+  rows.forEach((r,i)=>{
+    let current=year===nowYear && i===nowMonth;
+    let pct=annualTotal?r.total/annualTotal*100:0;
+    let bar=r.total/maxMonth*100;
+    html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b>'+
+        '<div class="muted">'+r.count+' işlem · '+r.days+' aktif gün · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
+        '<b style="font-size:18px;white-space:nowrap">'+r.total.toLocaleString('tr-TR')+' ₺</b>'+
+      '</div>'+
+      '<div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div>'+
+      '<div class="muted" style="font-size:11px;margin-top:4px">'+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'% yıllık ciro</div>'+
+    '</div>';
+  });
+
+  if(serviceRows.length){
+    html+='<h3 style="margin:18px 0 10px">✂️ Hizmet Bazında Ciro</h3>';
+    serviceRows.forEach(([name,total])=>{
+      let pct=annualTotal?total/annualTotal*100:0;
+      html+='<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #eee">'+
+        '<span>'+name+' <small class="muted">('+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span>'+
+        '<b>'+total.toLocaleString('tr-TR')+' ₺</b></div>';
+    });
+  }
+
+  html+='<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
+  $('modalTitle').textContent='💰 Ciro';
+  $('modalBody').innerHTML=html;
+  $('modal').style.display='flex';
+}
+</script>
+</body></html>
