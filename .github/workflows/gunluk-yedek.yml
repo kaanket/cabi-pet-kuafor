@@ -17,7 +17,10 @@ jobs:
           set -e
           test -n "$SUPABASE_DB_URL"
           mkdir -p backup
-          pg_dump "$SUPABASE_DB_URL" \
+
+          CLEAN_DB_URL=$(python3 -c 'import os, urllib.parse; u=os.environ["SUPABASE_DB_URL"]; p=urllib.parse.urlsplit(u); q=[(k,v) for k,v in urllib.parse.parse_qsl(p.query, keep_blank_values=True) if k.lower() != "database"]; print(urllib.parse.urlunsplit((p.scheme,p.netloc,p.path or "/postgres",urllib.parse.urlencode(q),p.fragment)))')
+
+          pg_dump "$CLEAN_DB_URL" \
             --format=custom \
             --file="backup/cabi-pet-kuafor-$(date +%Y-%m-%d).dump"
 
