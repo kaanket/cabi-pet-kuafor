@@ -192,6 +192,15 @@ async function confirmDeleteCustomer(id){
   closeModal();
   await loadAll();
 }
+async function deleteAppt(id){
+  let a=db.appointments.find(x=>x.id===id);
+  if(!a)return;
+  if(!confirm('Bu randevuyu silmek istediğinize emin misiniz?\n\n'+(a.appointment_date||'')+' · '+(a.appointment_time||'').slice(0,5)))return;
+  let{error}=await sb.from('appointments').delete().eq('id',id);
+  if(error)return alert('Randevu silinemedi: '+error.message);
+  closeModal();
+  await loadAll();
+}
 async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
 function whatsappAppointment(apptId){
   let upcoming=db.appointments.find(a=>a.id===apptId);
