@@ -278,10 +278,20 @@ function monthlyRevenue(offset=0){
     let revenueAppts=appts.filter(a=>!['Gelmedi','İptal'].includes(a.status||'Bekliyor'));
     let total=revenueAppts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
     let days=new Set(appts.map(a=>a.appointment_date)).size;
-    rows.push({month:months[m],total,count:revenueAppts.length,days,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length});
+    let cats=revenueAppts.filter(a=>{
+      let c=db.customers.find(x=>x.id===a.customer_id);
+      return String(c?.pet_type||'').toLowerCase()==='kedi';
+    }).length;
+    let dogs=revenueAppts.filter(a=>{
+      let c=db.customers.find(x=>x.id===a.customer_id);
+      return String(c?.pet_type||'').toLowerCase()==='köpek' || String(c?.pet_type||'').toLowerCase()==='kopek';
+    }).length;
+    rows.push({month:months[m],total,count:revenueAppts.length,days,cats,dogs,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length});
     annualTotal+=total; annualCount+=revenueAppts.length;
   }
   let best=rows.reduce((a,b)=>b.total>a.total?b:a,rows[0]);
+  let annualCats=rows.reduce((sum,r)=>sum+r.cats,0);
+  let annualDogs=rows.reduce((sum,r)=>sum+r.dogs,0);
   let annualAvg=annualCount?annualTotal/annualCount:0;
   let services={};
   db.appointments.forEach(a=>{
@@ -307,6 +317,7 @@ function monthlyRevenue(offset=0){
       '<div class="card"><small>Toplam işlem</small><h2>'+annualCount+'</h2></div>'+
       '<div class="card"><small>Ortalama işlem</small><h3>'+annualAvg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</h3></div>'+
       '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
+      '<div class="card" style="grid-column:1/-1"><small>Yıllık hayvan sayısı</small><h3 style="margin-bottom:0">🐱 '+annualCats+' kedi · 🐶 '+annualDogs+' köpek</h3></div>'+
     '</div>'+
     '<h3 style="margin:18px 0 10px">📊 Ay Ay Detay</h3>';
 
@@ -317,7 +328,7 @@ function monthlyRevenue(offset=0){
     html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
         '<div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b>'+
-        '<div class="muted">'+r.count+' işlem · '+r.days+' aktif gün · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
+        '<div class="muted">'+r.count+' işlem · '+r.days+' aktif gün · 🐱 '+r.cats+' kedi · 🐶 '+r.dogs+' köpek · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
         '<b style="font-size:18px;white-space:nowrap">'+r.total.toLocaleString('tr-TR')+' ₺</b>'+
       '</div>'+
       '<div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div>'+
