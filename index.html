@@ -122,6 +122,11 @@ async function confirmDeleteCustomer(id){
 }
 async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
 function whatsapp(id){
+  const paw=String.fromCodePoint(0x1F43E);
+  const cal=String.fromCodePoint(0x1F4C5);
+  const clock=String.fromCodePoint(0x23F0);
+  const pin=String.fromCodePoint(0x1F4CD);
+  const map=String.fromCodePoint(0x1F5FA,0xFE0F);
   let c=db.customers.find(x=>x.id===id);
   let ph=(c?.phone||'').replace(/\D/g,'');
   if(ph.startsWith('0'))ph='90'+ph.slice(1);
@@ -142,11 +147,7 @@ function whatsapp(id){
   let mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('Cabi Pet Kuaför, Topselvi, Yüce Sk. No:14, 34862 Kartal/İstanbul');
 
   // Emojileri Unicode escape ile oluşturuyoruz; MacBook/Safari -> WhatsApp aktarımında bozulmaz.
-  const paw='\uD83D\uDC3E';
   const calendar='\uD83D\uDCC5';
-  const clock='\u23F0';
-  const pin='\uD83D\uDCCD';
-  const map='\uD83D\uDDFA\uFE0F';
   let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+
     paw+' '+c.pet_name+nl+
     calendar+' Tarih: '+date+nl+
