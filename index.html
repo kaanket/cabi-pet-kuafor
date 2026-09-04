@@ -55,7 +55,13 @@
 <div class="section">📲 Yarınki Randevular <span id="tomorrowCount" class="muted"></span></div>
 <div id="tomorrowAppointments" class="card"></div>
 <div class="section">Müşteri Ara</div>
-<div class="card"><input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı"><div id="customers"></div></div>
+<div class="card">
+<div style="position:relative">
+<input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı" style="padding-right:52px">
+<button type="button" onclick="clearCustomerSearch()" aria-label="Aramayı temizle" style="position:absolute;right:8px;top:4px;width:42px;height:42px;border:0;border-radius:12px;background:#eef3f2;color:#536563;font-size:22px;font-weight:700">×</button>
+</div>
+<div id="customers"></div>
+</div>
 </div>
 <div class="nav"><button class="btn" onclick="monthlyRevenue()">💰 Aylık Ciro</button>
 <button onclick="location.reload()"><b>⌂</b>Ana Sayfa</button><button onclick="openAppt()"><b>📅</b>Randevu</button><button onclick="focusSearch()"><b>🐾</b>Müşteriler</button><button onclick="openSettings()"><b>⚙️</b>Ayarlar</button></div></div>
@@ -87,6 +93,7 @@ function isRisky(customerId){return missedCount(customerId)>=2}
 function riskText(customerId){let n=missedCount(customerId);return n>=2?'⚠️ Riskli müşteri · '+n+' habersiz gelmeme':n+' habersiz gelmeme'}
 
 function renderCustomers(){let q=($('search').value||'').trim().toLowerCase();if(!q){$('customers').innerHTML='<div class="empty">Müşteri aramak için isim, telefon veya hayvan adı yazın.</div>';return}let c=db.customers.filter(x=>(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).toLowerCase().includes(q)).slice(0,20);$('customers').innerHTML=c.length?c.map(x=>{let n=missedCount(x.id),risk=n>=2;return `<div class="row"><div onclick="detail('${x.id}')" style="cursor:pointer;flex:1"><b>${esc(x.owner_name)}</b>${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>🐾 ${esc(x.pet_name)} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small>${n?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`}).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
+function clearCustomerSearch(){ $('search').value=''; let c=[...db.customers].sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr')); $('customers').innerHTML=c.length?c.map(x=>{let n=missedCount(x.id),risk=n>=2;return `<div class="row"><div onclick="detail('${x.id}')" style="cursor:pointer;flex:1"><b>${esc(x.owner_name)}</b>${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>🐾 ${esc(x.pet_name)} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small>${n?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`}).join(''):'<div class="empty">Kayıtlı müşteri yok.</div>'}
 
 function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="breed" placeholder="Toy Poodle"><label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
 async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:$('breed').value,weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
