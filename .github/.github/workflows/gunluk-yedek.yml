@@ -1,0 +1,29 @@
+name: Cabi Pet Kuaför - Günlük Yedek
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: PostgreSQL yedeği al
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -e
+          test -n "$SUPABASE_DB_URL"
+          mkdir -p backup
+          pg_dump "$SUPABASE_DB_URL" \
+            --format=custom \
+            --file="backup/cabi-pet-kuafor-$(date +%Y-%m-%d).dump"
+
+      - name: Yedeği sakla
+        uses: actions/upload-artifact@v4
+        with:
+          name: cabi-pet-kuafor-yedek-${{ github.run_id }}
+          path: backup/*.dump
+          retention-days: 90
