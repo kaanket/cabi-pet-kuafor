@@ -52,6 +52,8 @@
 </div>
 <div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
 <div id="appointments" class="card"></div>
+<div class="section">📲 Yarınki Randevular <span id="tomorrowCount" class="muted"></span></div>
+<div id="tomorrowAppointments" class="card"></div>
 <div class="section">Müşteri Ara</div>
 <div class="card"><input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı"><div id="customers"></div></div>
 </div>
@@ -75,8 +77,10 @@ async function start(){let{data:{session}}=await sb.auth.getSession();if(session
 function showApp(){$('auth').style.display='none';$('main').style.display='block'}
 async function loadAll(){let c=await sb.from('customers').select('*').order('created_at',{ascending:false});let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});if(c.error||a.error){alert((c.error||a.error).message);return}db.customers=c.data||[];db.appointments=a.data||[];render()}
 function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).subscribe()}
-function render(){renderAppts();renderCustomers()}
+function render(){renderAppts();renderTomorrow();renderCustomers()}
 function renderAppts(){let d=new Date().toISOString().slice(0,10),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}</b><br><small>🐾 ${esc(c.pet_name||'')} · ${esc(x.service)}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
+function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
+function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}</b><br><small>🐾 ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn primary" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
 function renderCustomers(){let q=($('search').value||'').trim().toLowerCase();if(!q){$('customers').innerHTML='<div class="empty">Müşteri aramak için isim, telefon veya hayvan adı yazın.</div>';return}let c=db.customers.filter(x=>(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).toLowerCase().includes(q)).slice(0,20);$('customers').innerHTML=c.length?c.map(x=>`<div class="row"><div><b>${esc(x.owner_name)}</b><br><small>🐾 ${esc(x.pet_name)} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small></div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
 function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="breed" placeholder="Toy Poodle"><label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
 async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:$('breed').value,weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
@@ -164,52 +168,45 @@ async function confirmDeleteCustomer(id){
   await loadAll();
 }
 async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
-function whatsapp(id){
-  let c=db.customers.find(x=>x.id===id);
-  let ph=(c?.phone||'').replace(/\D/g,'');
+function whatsappAppointment(apptId){
+  let upcoming=db.appointments.find(a=>a.id===apptId);
+  if(!upcoming)return alert('Randevu bulunamadı.');
+  let c=db.customers.find(x=>x.id===upcoming.customer_id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let ph=(c.phone||'').replace(/\D/g,'');
   if(ph.startsWith('0'))ph='90'+ph.slice(1);
   if(!ph)return alert('Telefon numarası kayıtlı değil.');
-
-  let now=new Date();
-  let upcoming=db.appointments
-    .filter(a=>a.customer_id===id && a.appointment_date)
-    .map(a=>({...a,_dt:new Date(a.appointment_date+'T'+(a.appointment_time||'23:59'))}))
-    .filter(a=>a._dt>=now)
-    .sort((a,b)=>a._dt-b._dt)[0];
-
-  if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
-
-  let date=upcoming._dt.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let date=new Date(upcoming.appointment_date+'T12:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
   let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
   let nl=String.fromCharCode(10);
   let mapUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('Cabi Pet Kuaför, Topselvi, Yüce Sk. No:14, 34862 Kartal/İstanbul');
-
-  // Emojileri Unicode escape ile oluşturuyoruz; MacBook/Safari -> WhatsApp aktarımında bozulmaz.
-  const paw='\uD83D\uDC3E';
-  const calendar='\uD83D\uDCC5';
-  const clock='\u23F0';
-  const pin='\uD83D\uDCCD';
-  const map='\uD83D\uDDFA\uFE0F';
-  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+
-    paw+' '+c.pet_name+nl+
-    calendar+' Tarih: '+date+nl+
-    (time?clock+' Saat: '+time+nl:'')+
-    nl+'Görüşmek üzere. '+paw+nl+nl+
-    pin+' Cabi Pet Kuaför'+nl+
-    map+' Konum: '+mapUrl;
-
-  const waUrl='https://wa.me/'+ph+'?text='+encodeURIComponent(text);
-  window.open(waUrl,'_blank');
+  const paw='\uD83D\uDC3E',calendar='\uD83D\uDCC5',clock='\u23F0',pin='\uD83D\uDCCD',map='\uD83D\uDDFA\uFE0F';
+  let text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Görüşmek üzere. '+paw+nl+nl+pin+' Cabi Pet Kuaför'+nl+map+' Konum: '+mapUrl;
+  window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(text),'_blank');
 }
+function whatsapp(id){
+  let c=db.customers.find(x=>x.id===id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let now=new Date();
+  let upcoming=db.appointments.filter(a=>a.customer_id===id&&a.appointment_date).map(a=>({...a,_dt:new Date(a.appointment_date+'T'+(a.appointment_time||'23:59'))})).filter(a=>a._dt>=now).sort((a,b)=>a._dt-b._dt)[0];
+  if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
+  whatsappAppointment(upcoming.id);
+}
+
 function openCalendar(){let d=new Date().toISOString().slice(0,10);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
 function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}</b><br><small>🐾 ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')} · ${esc(x.service)}</small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
+function freeDateLabel(date){
+  let d=new Date(date+'T12:00:00');
+  return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+}
 function openFreeSlots(date=new Date().toISOString().slice(0,10)){
   $('modalTitle').textContent='Boş Saatler';
-  $('modalBody').innerHTML=`<label>Tarih</label><input id="freeDate" type="date" value="${date}" onchange="renderFreeSlots(this.value)"><div id="freeSlots"></div>`;
+  $('modalBody').innerHTML=`<label>Tarih</label><input id="freeDate" type="date" value="${date}" onchange="renderFreeSlots(this.value)"><div id="freeDateLabel" class="card" style="margin-top:8px;text-align:center;font-size:18px;font-weight:700">📅 ${freeDateLabel(date)}</div><div id="freeSlots"></div>`;
   $('modal').style.display='flex';
   renderFreeSlots(date);
 }
 function renderFreeSlots(date){
+  let label=$('freeDateLabel');if(label)label.innerHTML='📅 '+freeDateLabel(date);
   let a=db.appointments.filter(x=>x.appointment_date===date);
   let occupied={};
   a.forEach(x=>{let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
