@@ -139,9 +139,9 @@ function showNewApptCustomer(){
 function filterApptCustomers(){
   let q=($('apptSearch').value||'').toLowerCase().trim();
   let c=db.customers.filter(x=>(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).toLowerCase().includes(q)).slice(0,30);
-  $('apptResults').innerHTML=(c.length?c.map(x=>{let risk=isRisky(x.id);return `<div class="row" style="cursor:pointer" onclick="selectApptCustomer('${x.id}')"><div><b>${esc(x.owner_name)}</b>${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>🐾 ${esc(x.pet_name)} · ${esc(x.phone||'')} · ${esc(x.breed||'Irk yok')}</small>${missedCount(x.id)?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><span>Seç</span></div>`}).join(''):'<div class="empty">Müşteri bulunamadı.</div>')+`<button class="btn" style="width:100%;margin-top:8px" onclick="showNewApptCustomer()">➕ Yeni Müşteri Bilgileri Gir</button>`;
+  $('apptResults').innerHTML=(c.length?c.map(x=>{let risk=isRisky(x.id);return `<div class="row" style="cursor:pointer" onclick="selectApptCustomer('${x.id}')"><div><b>${esc(x.owner_name)}</b>${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>🐾 ${esc(x.pet_name)} · ${String(x.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'} · ${esc(x.phone||'')} · ${esc(x.breed||'Irk yok')}</small>${missedCount(x.id)?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><span>Seç</span></div>`}).join(''):'<div class="empty">Müşteri bulunamadı.</div>')+`<button class="btn" style="width:100%;margin-top:8px" onclick="showNewApptCustomer()">➕ Yeni Müşteri Bilgileri Gir</button>`;
 }
-function selectApptCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('cid').value=id;let n=missedCount(id);$('apptSelected').innerHTML=`<b>Seçilen:</b> ${esc(c.pet_name)} — ${esc(c.owner_name)} ${c.phone?`· ${esc(c.phone)}`:''}${n>=2?`<div class="warning-card">⚠️ Bu müşteri riskli olarak işaretli. ${n} kez habersiz gelmedi.</div>`:''}`;$('apptSearch').value='';$('apptResults').innerHTML=''}
+function selectApptCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('cid').value=id;let n=missedCount(id);let type=String(c.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek';$('apptSelected').innerHTML=`<b>Seçilen:</b> ${esc(c.pet_name)} — ${esc(c.owner_name)} ${c.phone?`· ${esc(c.phone)}`:''}<br><b>Hayvan türü: ${type}</b>${n>=2?`<div class="warning-card">⚠️ Bu müşteri riskli olarak işaretli. ${n} kez habersiz gelmedi.</div>`:''}`;$('apptSearch').value='';$('apptResults').innerHTML=''}
 async function addAppt(){
   let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
   let cid=$('cid').value;
@@ -174,14 +174,7 @@ function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('
 async function confirmDeleteCustomer(id){
   let c=db.customers.find(x=>x.id===id);
   if(!c)return;
-  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\\n\\n'+c.pet_name+' — '+c.owner_name))return;
-
-  // Müşteri silinse bile geçmiş randevular ve ciro kaydı silinmesin.
-  // Önce randevuların müşteri bağlantısını kaldırıyoruz; böylece
-  // customers -> appointments ON DELETE CASCADE devreye girmez.
-  let{error:ae}=await sb.from('appointments').update({customer_id:null}).eq('customer_id',id);
-  if(ae)return alert('Müşteri silinemedi: '+ae.message);
-
+  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\n\n'+c.pet_name+' — '+c.owner_name))return;
   let{error}=await sb.from('customers').delete().eq('id',id);
   if(error)return alert(error.message);
   closeModal();
