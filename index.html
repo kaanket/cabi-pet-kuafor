@@ -492,7 +492,11 @@ function renderFreeSlots(date){
   let rows='';
   for(let h=9;h<22;h++) for(let m of [0,30]){
     let t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),x=occupied[t],c=x?db.customers.find(c=>c.id===x.customer_id):null;
-    if(x) rows+=`<div class="row" style="background:#fff0f0;border-radius:12px;padding:12px;margin:6px 0"><div><b>🔴 ${t} · Dolu</b><br><small>${petTypeLabel(c)} · ${esc(c?.pet_name||'')} · ${esc(c?.owner_name||'')}${c?.deleted_at?' · Silinmiş müşteri':''}</small></div><button class="btn" style="padding:8px 12px" onclick="editAppt('${x.id}')">Düzenle</button></div>`;
+    if(x) {
+      let svc=x.service||'Tıraş';
+      let svcIcon=svc.includes('Hijyen')?'🛁':(svc.includes('Makas')?'✂️':'✂️');
+      rows+=`<div class="row" style="background:#fff0f0;border-radius:12px;padding:12px;margin:6px 0"><div><b>🔴 ${t} · Dolu</b><br><small>${petTypeLabel(c)} · ${esc(c?.pet_name||'')} · ${esc(c?.owner_name||'')}${c?.deleted_at?' · Silinmiş müşteri':''}</small><br><small>${svcIcon} <b>${esc(svc)}</b></small></div><button class="btn" style="padding:8px 12px" onclick="editAppt('${x.id}')">Düzenle</button></div>`;
+    }
     else rows+=`<div class="row" style="background:#eaf8f3;border-radius:12px;padding:12px;margin:6px 0"><div><b>🟢 ${t} · Boş</b></div><button class="btn primary" style="padding:8px 12px" onclick="newApptAt('${date}','${t}')">+ Randevu</button></div>`;
   }
   $('freeSlots').innerHTML=`<div class="card" style="margin-top:10px"><b>09:00 – 22:00 çalışma saatleri</b><div class="muted" style="margin-top:4px">30 dakikalık aralıklarla randevu oluşturabilirsin.</div></div>${rows}`;
