@@ -81,8 +81,17 @@ async function signup(){let email=$('email').value.trim(),password=$('password')
 async function logout(){await sb.auth.signOut()}
 async function start(){let{data:{session}}=await sb.auth.getSession();if(session){showApp();await loadAll();subscribe()}else{$('auth').style.display='flex';$('main').style.display='none'}sb.auth.onAuthStateChange(async(_e,s)=>{if(s){showApp();await loadAll();subscribe()}else{if(channel)sb.removeChannel(channel);$('auth').style.display='flex';$('main').style.display='none'}})}
 function showApp(){$('auth').style.display='none';$('main').style.display='block'}
-async function loadAll(){let c=await sb.from('customers').select('*').order('created_at',{ascending:false});let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});if(c.error||a.error||s.error){alert((c.error||a.error||s.error).message);return}db.customers=c.data||[];db.appointments=a.data||[];db.sales=s.data||[];render()}
-function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).subscribe()}
+async function loadAll(){
+  let c=await sb.from('customers').select('*').order('created_at',{ascending:false});
+  let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});
+  if(c.error||a.error){alert((c.error||a.error).message);return}
+  db.customers=c.data||[];
+  db.appointments=a.data||[];
+  let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});
+  db.sales=s.error?[]:(s.data||[]);
+  render();
+}
+function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll()).subscribe()}
 function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
 function render(){renderAppts();renderTomorrow();renderCustomers()}
 function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
