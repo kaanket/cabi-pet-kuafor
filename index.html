@@ -199,6 +199,23 @@ input:focus,select:focus,textarea:focus{
 .logout{background:#E8F4F1;color:var(--cabi-deep)}
 </style>
 
+<style>
+.hero-card{position:relative;overflow:hidden;transition:max-height .28s ease,padding .28s ease,box-shadow .28s ease}
+.hero-toggle{position:absolute;right:16px;top:14px;z-index:3;width:36px;height:36px;border:1px solid #ffffff55;border-radius:50%;background:#ffffff1c;color:#fff;font-size:20px;font-weight:800;cursor:pointer;line-height:1}
+.hero-toggle:active{transform:scale(.94)}
+.hero-card.hero-collapsed{max-height:58px!important;padding-top:11px!important;padding-bottom:11px!important;box-shadow:0 7px 18px #155e5818}
+.hero-card.hero-collapsed .hero-top,.hero-card.hero-collapsed .hero-bottom{display:none}
+.hero-card.hero-collapsed .hero-toggle{top:11px;right:12px;transform:rotate(180deg)}
+</style>
+<style>
+/* V14: BUGÜN bannerı yalnızca MacBook/masaüstünde açılıp kapanabilir */
+.hero-toggle{display:block}
+@media (pointer:coarse), (max-width:899px){
+  .hero-toggle{display:none!important}
+  .hero-card.hero-collapsed{max-height:none!important;padding-top:32px!important;padding-bottom:32px!important}
+  .hero-card.hero-collapsed .hero-top,.hero-card.hero-collapsed .hero-bottom{display:block}
+}
+</style>
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
@@ -219,7 +236,7 @@ input:focus,select:focus,textarea:focus{
   <button class="profile-btn" onclick="openSettings()" aria-label="Ayarlar">⚙️</button>
 </div>
 
-<div class="hero-card">
+<div class="hero-card" id="todayHero"><button class="hero-toggle" onclick="toggleTodayHero()" aria-label="Bugün bilgisini aç/kapat">⌃</button>
   <div class="hero-top">
     <div>
       <div class="hero-label">BUGÜN</div>
@@ -324,7 +341,21 @@ function updateHomeSummary(){
   el=$('heroApptText');if(el)el.textContent=today.length+' randevu';
   el=$('heroRevenueText');if(el)el.textContent=Number(revenue).toLocaleString('tr-TR')+' ₺ ciro';
 }
-function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary()}
+function toggleTodayHero(){
+  let el=$('todayHero');
+  if(!el)return;
+  if(window.matchMedia && window.matchMedia('(pointer:coarse)').matches)return;
+  el.classList.toggle('hero-collapsed');
+  try{localStorage.setItem('cabi_today_hero_collapsed',el.classList.contains('hero-collapsed')?'1':'0')}catch(e){}
+}
+function restoreTodayHero(){
+  let el=$('todayHero');
+  if(!el)return;
+  let isTouch=window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  if(isTouch){el.classList.remove('hero-collapsed');return}
+  try{if(localStorage.getItem('cabi_today_hero_collapsed')==='1')el.classList.add('hero-collapsed')}catch(e){}
+}
+function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary();restoreTodayHero()}
 function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
 function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
 function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn primary" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
