@@ -227,7 +227,10 @@ function updateHomeSummary(){
   let d=localDateStr(0);
   let today=db.appointments.filter(a=>a.appointment_date===d);
   let valid=today.filter(a=>!['Gelmedi','İptal'].includes(a.status||'Bekliyor'));
-  let revenue=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
+  let revenueAppts=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
+  let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
+  let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
+  let revenue=revenueAppts+revenueSales;
   let dateObj=new Date(d+'T12:00:00');
   let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   dateText=dateText.charAt(0).toUpperCase()+dateText.slice(1);
