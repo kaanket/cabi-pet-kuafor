@@ -317,9 +317,14 @@ async function deleteSale(id){
   if(!s)return;
   let label=(s.product_name||'Satış')+' · '+Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₺';
   if(!confirm('Bu satışı silmek istediğinize emin misiniz?\n\n'+label))return;
+
   let {error}=await sb.from('sales').delete().eq('id',id);
   if(error)return alert('Satış silinemedi: '+error.message);
-  await loadAll();
+
+  // Silme sonrası tüm tabloları yeniden çekmiyoruz; böylece başka bir tablonun
+  // izin hatası satış silme işlemini bozmaz.
+  db.sales=(db.sales||[]).filter(x=>x.id!==id);
+  render();
   openSalesHistory();
 }
 
