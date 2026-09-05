@@ -416,15 +416,11 @@ async function openSales(){
   $('modalBody').innerHTML=`
     <div class="field"><label>Satış türü</label>
       <select id="saleType">
-        <option>Aksesuar</option>
-        <option>Mama</option>
-        <option>Oyuncak</option>
-        <option>Bakım ürünü</option>
-        <option>Diğer</option>
+        <option value="Aksesuar">Aksesuar</option>
+        <option value="Kıyafet">Kıyafet</option>
+        <option value="Bakım ürünü">Bakım ürünü</option>
+        <option value="Diğer">Diğer</option>
       </select>
-    </div>
-    <div class="field"><label>Ürün / açıklama</label>
-      <input id="saleName" placeholder="Örn. Tasma">
     </div>
     <div class="field"><label>Tutar (₺)</label>
       <input id="salePrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
@@ -432,7 +428,7 @@ async function openSales(){
     <div class="field"><label>Not</label>
       <textarea id="saleNote" placeholder="İsteğe bağlı"></textarea>
     </div>
-    <button class="btn" style="width:100%;margin-top:10px" onclick="saveSale()">Satışı Kaydet</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveSale()">Satışı Kaydet</button>
   `;
   $('modal').style.display='flex';
 }
@@ -440,11 +436,10 @@ async function openSales(){
 async function saveSale(){
   let sale={
     sale_type:$('saleType').value,
-    product_name:$('saleName').value.trim(),
+    product_name:$('saleType').value,
     price:Number($('salePrice').value||0),
     note:$('saleNote').value.trim()
   };
-  if(!sale.product_name)return alert('Ürün / açıklama yazın.');
   if(!(sale.price>0))return alert('Geçerli bir tutar girin.');
 
   let {error}=await sb.from('sales').insert(sale);
@@ -452,7 +447,6 @@ async function saveSale(){
   closeModal();
   await loadAll();
 }
-
 
 async function deleteSale(id){
   let s=(db.sales||[]).find(x=>x.id===id);
