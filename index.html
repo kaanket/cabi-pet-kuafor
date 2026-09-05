@@ -615,7 +615,7 @@ function monthlyRevenue(offset=0){
   let year=base.getFullYear()+offset;
   let nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-  let rows=[], annualTotal=0, annualCount=0;
+  let rows=[], annualTotal=0, annualCount=0, annualApptCount=0, annualSaleCount=0;
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
@@ -633,7 +633,7 @@ function monthlyRevenue(offset=0){
       return String(c?.pet_type||'').toLowerCase()==='köpek' || String(c?.pet_type||'').toLowerCase()==='kopek';
     }).length;
     rows.push({month:months[m],total,count:revenueAppts.length+sales.length,days,cats,dogs,avg:(revenueAppts.length+sales.length)?total/(revenueAppts.length+sales.length):0,allCount:appts.length,salesCount:sales.length,salesTotal});
-    annualTotal+=total; annualCount+=revenueAppts.length+sales.length;
+    annualTotal+=total; annualCount+=revenueAppts.length+sales.length; annualApptCount+=revenueAppts.length; annualSaleCount+=sales.length;
   }
   let best=rows.reduce((a,b)=>b.total>a.total?b:a,rows[0]);
   let annualCats=rows.reduce((sum,r)=>sum+r.cats,0);
@@ -660,7 +660,9 @@ function monthlyRevenue(offset=0){
     '</div>'+
     '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+
       '<div class="card"><small>Yıllık toplam</small><h2>'+annualTotal.toLocaleString('tr-TR')+' ₺</h2></div>'+
-      '<div class="card"><small>Toplam işlem</small><h2>'+annualCount+'</h2></div>'+
+      '<div class="card"><small>Randevu</small><h2>'+annualApptCount+'</h2></div>'+
+      '<div class="card"><small>Satış</small><h2>'+annualSaleCount+'</h2></div>'+
+      '<div class="card"><small>Toplam işlem</small><h3>'+annualCount+'</h3></div>'+
       '<div class="card"><small>Ortalama işlem</small><h3>'+annualAvg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</h3></div>'+
       '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
       '<div class="card" style="grid-column:1/-1"><small>Yıllık hayvan sayısı</small><h3 style="margin-bottom:0">🐱 '+annualCats+' kedi · 🐶 '+annualDogs+' köpek</h3></div>'+
@@ -674,7 +676,7 @@ function monthlyRevenue(offset=0){
     html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
         '<div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b>'+
-        '<div class="muted">'+r.count+' işlem · '+r.days+' aktif gün · 🐱 '+r.cats+' kedi · 🐶 '+r.dogs+' köpek · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
+        '<div class="muted">'+(r.count-r.salesCount)+' randevu · '+r.salesCount+' satış · '+r.days+' aktif gün · 🐱 '+r.cats+' kedi · 🐶 '+r.dogs+' köpek · Ort. '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
         '<b style="font-size:18px;white-space:nowrap">'+r.total.toLocaleString('tr-TR')+' ₺</b>'+
       '</div>'+
       '<div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div>'+
