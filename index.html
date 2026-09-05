@@ -47,7 +47,7 @@
 <button class="btn" onclick="focusSearch()">🔍<br>Müşteri Ara</button>
 <button class="btn" onclick="openCalendar()">🗓️<br>Takvim</button>
 <button class="btn" onclick="openFreeSlots()">🟢<br>Boş Saatler</button>
-<button class="btn" onclick="openRevenue()">💰<br>Ciro</button>
+<button class="btn" onclick="openRevenue()">💰<br>Ciro</button><button class="btn" onclick="openPortfolio()">🐾<br>Portföy</button>
 <button class="btn" onclick="openSettings()">⚙️<br>Ayarlar</button>
 </div>
 <div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
@@ -258,6 +258,35 @@ function renderFreeSlots(date){
   $('freeSlots').innerHTML=`<div class="card" style="margin-top:10px"><b>09:00 – 22:00 çalışma saatleri</b><div class="muted" style="margin-top:4px">30 dakikalık aralıklarla randevu oluşturabilirsin.</div></div>${rows}`;
 }
 function newApptAt(date,time){openAppt();setTimeout(()=>{if($('date'))$('date').value=date;if($('time'))$('time').value=time},0)}
+
+function openPortfolio(){
+  let active=db.customers.filter(c=>!c.deleted_at);
+  let cats=active.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
+  let dogs=active.filter(c=>{
+    let t=String(c.pet_type||'').trim().toLowerCase();
+    return t==='köpek'||t==='kopek';
+  }).length;
+  let other=Math.max(active.length-cats-dogs,0);
+  let catPct=active.length?cats/active.length*100:0;
+  let dogPct=active.length?dogs/active.length*100:0;
+
+  $('modalTitle').textContent='🐾 Müşteri Portföyü';
+  $('modalBody').innerHTML=
+    '<div class="card" style="text-align:center">'+
+      '<div class="muted">Aktif müşteri portföyü</div>'+
+      '<div style="font-size:38px;font-weight:800;margin-top:4px">'+active.length+'</div>'+
+      '<div class="muted">toplam müşteri</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
+      '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐶</div><b style="font-size:24px">'+dogs+'</b><div>Köpek</div><small class="muted">'+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
+      '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐱</div><b style="font-size:24px">'+cats+'</b><div>Kedi</div><small class="muted">'+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
+    '</div>'+
+    (other?'<div class="card" style="text-align:center"><b>Diğer / türü belirtilmemiş</b><div style="font-size:22px;margin-top:4px">'+other+'</div></div>':'')+
+    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez.</div>'+
+    '<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
+  $('modal').style.display='flex';
+}
+
 function openRevenue(){monthlyRevenue(0)}
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
 async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
