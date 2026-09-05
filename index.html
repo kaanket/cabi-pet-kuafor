@@ -126,6 +126,79 @@ body{background:#f5f8f7}
 }
 
 </style>
+
+<style>
+/* ===== V8 — Premium mint / petrol renk paleti ===== */
+:root{
+  --cabi-deep:#155E58;
+  --cabi-primary:#197A70;
+  --cabi-mint:#68B9A9;
+  --cabi-soft:#EAF6F3;
+  --cabi-bg:#F3F8F7;
+  --cabi-text:#183532;
+  --cabi-muted:#6F817E;
+  --cabi-border:#DCE9E6;
+}
+body{background:var(--cabi-bg);color:var(--cabi-text)}
+.app{background:transparent}
+.muted{color:var(--cabi-muted)}
+.card{border:1px solid var(--cabi-border);box-shadow:0 5px 18px #155e580b}
+.btn{background:var(--cabi-soft);color:var(--cabi-deep)}
+.btn.primary,.primary{background:var(--cabi-primary);color:#fff}
+.hero-card{
+  background:linear-gradient(135deg,var(--cabi-deep) 0%,var(--cabi-primary) 58%,#3B9D8D 100%);
+  box-shadow:0 12px 30px #155e5828;
+}
+.home-eyebrow{color:var(--cabi-primary)}
+.profile-btn{border-color:var(--cabi-border);box-shadow:0 4px 12px #155e580d}
+.quick{
+  border-color:var(--cabi-border);
+  box-shadow:0 5px 16px #155e580b;
+  color:var(--cabi-text);
+}
+.quick span{color:var(--cabi-primary)}
+.quick.primary{
+  background:var(--cabi-primary);
+  border-color:var(--cabi-primary);
+  box-shadow:0 9px 22px #197a702b;
+}
+.tools-row button{
+  border-color:var(--cabi-border);
+  color:#28524D;
+  box-shadow:0 4px 12px #155e5809;
+}
+.tools-row button:active,.quick:active,.profile-btn:active{
+  background:#E5F3F0;
+}
+.nav{
+  border-top-color:var(--cabi-border);
+  box-shadow:0 -8px 24px #155e5810;
+}
+.nav button:first-child{color:var(--cabi-primary)}
+.nav button:active{background:#E8F5F2}
+.tag{background:#E8F4F1;color:var(--cabi-deep)}
+.status-bekliyor{background:#FFF1D8!important}
+.status-geldi{background:#E3F1FF!important}
+.status-gelmedi{background:#FFE7E7!important}
+.status-select{color:#294944}
+.section{color:var(--cabi-text)}
+input,select,textarea{
+  border-color:var(--cabi-border);
+  color:var(--cabi-text);
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--cabi-mint);
+  box-shadow:0 0 0 3px #68B9A922;
+}
+.modal{background:#0D373355}
+.sheet{background:#F6FAF9}
+.modal-close-bar{background:#F6FAF9;border-top-color:var(--cabi-border)}
+.warning-card{background:#FFF5DA;border-color:#EBD58F}
+.danger{background:#FFE9E9;color:#A33}
+.logout{background:#E8F4F1;color:var(--cabi-deep)}
+</style>
+
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
