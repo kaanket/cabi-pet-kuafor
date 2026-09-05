@@ -79,6 +79,52 @@ body{background:#f5f8f7}
   .tools-row{max-width:760px;grid-template-columns:repeat(4,1fr)}
 }
 
+
+/* ===== V3 — Profesyonel alt navigasyon ===== */
+.nav{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  align-items:center;
+  gap:2px;
+  max-width:560px;
+  margin:0 auto;
+  padding:7px 8px calc(7px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.97);
+  border-top:1px solid #dfe9e6;
+  box-shadow:0 -7px 22px #0000000b;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.nav button{
+  min-width:0;
+  min-height:54px;
+  border:0;
+  border-radius:15px;
+  background:transparent;
+  color:#71807f;
+  font-size:11px;
+  font-weight:700;
+  padding:5px 2px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+}
+.nav button b{
+  display:block;
+  font-size:20px;
+  line-height:21px;
+  margin:0;
+  font-weight:800;
+}
+.nav button span{display:block;line-height:15px}
+.nav button:active{background:#edf6f3;transform:scale(.97)}
+.nav button:first-child{color:#15947f}
+@media(min-width:900px){
+  .nav{max-width:1180px;border-radius:18px 18px 0 0;padding:9px 24px calc(9px + env(safe-area-inset-bottom))}
+}
+
 </style>
 </head>
 <body>
@@ -142,8 +188,13 @@ body{background:#f5f8f7}
 <div id="customers"></div>
 </div>
 </div>
-<div class="nav"><button class="btn" onclick="monthlyRevenue()">💰 Aylık Ciro</button>
-<button onclick="location.reload()"><b>⌂</b>Ana Sayfa</button><button onclick="openAppt()"><b>📅</b>Randevu</button><button onclick="focusSearch()"><b>🐾</b>Müşteriler</button><button onclick="openSettings()"><b>⚙️</b>Ayarlar</button></div></div>
+<div class="nav">
+  <button onclick="location.reload()"><b>⌂</b><span>Ana Sayfa</span></button>
+  <button onclick="openAppt()"><b>📅</b><span>Randevu</span></button>
+  <button onclick="focusSearch()"><b>🐾</b><span>Müşteriler</span></button>
+  <button onclick="monthlyRevenue()"><b>₺</b><span>Ciro</span></button>
+  <button onclick="openSettings()"><b>⚙️</b><span>Ayarlar</span></button>
+</div></div>
 
 <div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet"><h2 id="modalTitle"></h2><div id="modalBody" class="modal-body-scroll"></div><div class="modal-close-bar"><button class="btn" onclick="closeModal()">✕ Kapat</button></div></div></div>
 
