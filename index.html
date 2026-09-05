@@ -311,6 +311,18 @@ async function saveSale(){
   await loadAll();
 }
 
+
+async function deleteSale(id){
+  let s=(db.sales||[]).find(x=>x.id===id);
+  if(!s)return;
+  let label=(s.product_name||'Satış')+' · '+Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₺';
+  if(!confirm('Bu satışı silmek istediğinize emin misiniz?\n\n'+label))return;
+  let {error}=await sb.from('sales').delete().eq('id',id);
+  if(error)return alert('Satış silinemedi: '+error.message);
+  await loadAll();
+  openSalesHistory();
+}
+
 async function openSalesHistory(){
   let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
 
@@ -319,7 +331,10 @@ async function openSalesHistory(){
     <div class="row">
       <div><b>${esc(s.product_name||'')}</b><br>
       <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
-      <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+      <div style="display:flex;align-items:center;gap:8px">
+        <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+        <button class="btn" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+      </div>
     </div>
   `).join(''):'<div class="card">Henüz ürün satışı yok.</div>';
   $('modal').style.display='flex';
