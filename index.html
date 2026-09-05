@@ -248,7 +248,7 @@ function openFreeSlots(date=localDateStr(0)){
 function renderFreeSlots(date){
   let label=$('freeDateLabel');if(label)label.innerHTML='📅 '+freeDateLabel(date);
   let a=db.appointments.filter(x=>x.appointment_date===date),occupied={};
-  a.forEach(x=>{let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
+  a.forEach(x=>{let status=x.status||'Bekliyor';if(['İptal','Gelmedi'].includes(status))return;let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
   let rows='';
   for(let h=9;h<22;h++) for(let m of [0,30]){
     let t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),x=occupied[t],c=x?db.customers.find(c=>c.id===x.customer_id):null;
