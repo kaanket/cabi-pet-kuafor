@@ -28,161 +28,55 @@
 .appt-tabs{display:flex;gap:7px;margin:10px 0}.appt-tabs button{flex:1;padding:10px;border:1px solid #dce5e3;background:#fff;border-radius:12px;font-weight:700;color:#174b45}.appt-tabs button.active{background:#15947f;color:#fff;border-color:#15947f}.appt-week{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto;padding-bottom:6px}.appt-day{background:#f8fbfa;border:1px solid #e2eae8;border-radius:14px;min-height:300px;padding:8px}.appt-day-head{font-weight:800;text-align:center;padding:6px;border-bottom:1px solid #e5ecea;margin-bottom:6px}.appt-slot{min-height:54px;border:1px dashed #dce5e3;border-radius:10px;margin:5px 0;padding:5px}.appt-card{background:#fff;border:1px solid #dfe8e6;border-radius:10px;padding:7px;cursor:grab;box-shadow:0 2px 8px #0000000a}.appt-card:active{cursor:grabbing}.appt-card small{display:block;color:#71807f}.status-select{border:0!important;margin:0!important;padding:7px 9px!important;width:auto!important;font-size:12px!important;font-weight:700}.status-bekliyor{background:#fff4d6!important}.status-geldi{background:#e5f3ff!important}.status-islemde{background:#eee8ff!important}.status-tamamlandi{background:#e3f7ed!important}.status-gelmedi{background:#ffe8e8!important}.appt-day-drop{min-height:44px}.appt-month{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.month-cell{min-height:78px;background:#fff;border:1px solid #e4ebe9;border-radius:10px;padding:6px;cursor:pointer}.month-cell b{font-size:12px}.month-cell .mini{font-size:11px;margin-top:4px}.month-cell.today{border:2px solid #159b89}.month-title{display:flex;justify-content:space-between;align-items:center;margin:10px 0}.drag-hint{font-size:11px;color:#71807f;margin:5px 0 10px}
 @media(max-width:899px){.appt-week{grid-template-columns:repeat(7,150px)}.appt-month{min-width:650px}.month-wrap{overflow-x:auto}}
 
-/* ===== Cabi Pet Kuaför — Profesyonel iPhone Ana Ekran ===== */
-:root{
-  --cabi-green:#15947f;
-  --cabi-dark:#173535;
-  --cabi-bg:#f3f7f6;
-  --cabi-card:#ffffff;
-  --cabi-line:#e3ece9;
-  --cabi-soft:#e7f5f1;
+/* ===== Cabi Pet Kuaför — Ana Ekran V2 ===== */
+body{background:#f5f8f7}
+.app{max-width:560px;padding:16px 16px calc(92px + env(safe-area-inset-bottom))}
+.home-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+.home-head h1{font-size:28px;letter-spacing:-.7px;margin:2px 0 3px}
+.home-eyebrow{font-size:10px;letter-spacing:1.2px;font-weight:800;color:#15947f}
+.profile-btn{width:44px;height:44px;border:1px solid #dfe9e6;border-radius:15px;background:#fff;font-size:20px;box-shadow:0 4px 12px #00000009}
+.hero-card{
+  border-radius:25px;padding:19px 19px 16px;
+  background:linear-gradient(135deg,#146f62 0%,#15947f 55%,#28aa92 100%);
+  color:#fff;box-shadow:0 12px 28px #15947f25;margin-bottom:18px
 }
-html{background:var(--cabi-bg);-webkit-text-size-adjust:100%}
-body{
-  background:linear-gradient(180deg,#edf8f5 0,#f4f7f6 210px);
-  color:var(--cabi-dark);
-  padding-top:env(safe-area-inset-top);
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start}
+.hero-label{font-size:11px;font-weight:800;letter-spacing:1px;opacity:.82}
+.hero-date{font-size:21px;font-weight:800;margin-top:5px;line-height:1.2}
+.hero-paw{font-size:34px;opacity:.9}
+.hero-bottom{display:flex;gap:8px;margin-top:16px;font-size:13px;font-weight:700;opacity:.92}
+.quick-title{font-size:18px;font-weight:850;margin:18px 2px 10px}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick{
+  min-height:91px;border:1px solid #dfe9e6;border-radius:19px;background:#fff;
+  padding:14px;text-align:left;box-shadow:0 4px 14px #00000008;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;color:#173f3c
 }
-.app{
-  max-width:560px;
-  padding:14px 14px calc(92px + env(safe-area-inset-bottom));
+.quick:active,.tools-row button:active,.profile-btn:active{transform:scale(.98)}
+.quick span{font-size:25px;line-height:1;margin-bottom:4px;color:#15947f;font-weight:800}
+.quick b{font-size:15px}
+.quick small{font-size:11px;color:#7a8987}
+.quick.primary{background:#15947f;border-color:#15947f;color:#fff;box-shadow:0 8px 20px #15947f2b}
+.quick.primary span,.quick.primary small{color:#fff}
+.tools-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:11px 0 20px
 }
-#main .app>h1{
-  font-size:29px;
-  letter-spacing:-.7px;
-  margin:4px 0 2px;
+.tools-row button{
+  min-height:67px;border:1px solid #e0e9e7;background:#fff;border-radius:16px;
+  color:#294f4b;font-size:11px;font-weight:750;padding:7px 3px;
+  box-shadow:0 3px 10px #00000007
 }
-#main .app>.muted{
-  font-size:13px;
-}
-.logout{
-  margin-top:2px;
-  padding:8px 11px;
-  border:1px solid var(--cabi-line);
-  background:rgba(255,255,255,.8);
-  box-shadow:0 2px 8px #00000008;
-}
-.home-date-card{
-  background:linear-gradient(135deg,#15947f,#1ca88f);
-  color:#fff;
-  border-radius:24px;
-  padding:18px;
-  margin:16px 0 14px;
-  box-shadow:0 10px 25px #15947f26;
-}
-.home-date-card .date-title{font-size:13px;opacity:.9;font-weight:700}
-.home-date-card .date-main{font-size:23px;font-weight:800;margin-top:3px}
-.home-date-card .date-sub{font-size:12px;opacity:.86;margin-top:5px}
-.home-stats{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:9px;
-  margin:0 0 18px;
-}
-.home-stat{
-  background:#fff;
-  border:1px solid var(--cabi-line);
-  border-radius:17px;
-  padding:13px 9px;
-  text-align:center;
-  box-shadow:0 4px 14px #00000008;
-}
-.home-stat .num{font-size:22px;font-weight:800}
-.home-stat .lbl{font-size:11px;color:#71807f;margin-top:2px}
-.grid{
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
-  margin:12px 0 20px;
-}
-.grid .btn{
-  min-height:72px;
-  border-radius:18px;
-  border:1px solid var(--cabi-line);
-  background:#fff;
-  box-shadow:0 4px 13px #00000008;
-  font-size:14px;
-  line-height:1.25;
-  transition:transform .12s ease;
-}
-.grid .btn:active{transform:scale(.98)}
-.grid .btn.primary{
-  background:var(--cabi-green);
-  border-color:var(--cabi-green);
-  box-shadow:0 7px 18px #15947f2b;
-}
-.section{
-  font-size:18px;
-  letter-spacing:-.2px;
-  margin:20px 2px 9px;
-}
-.card{
-  border-radius:19px;
-  border:1px solid var(--cabi-line);
-  box-shadow:0 4px 15px #00000008;
-}
-#appointments.card,#tomorrowAppointments.card,#customers.card{
-  padding:13px;
-}
-#appointments .row,#tomorrowAppointments .row,#customers .row{
-  padding:13px 3px;
-}
-#appointments .row:first-child,#tomorrowAppointments .row:first-child,#customers .row:first-child{
-  padding-top:4px;
-}
-#appointments .row:last-child,#tomorrowAppointments .row:last-child,#customers .row:last-child{
-  padding-bottom:4px;
-}
-.tag{font-weight:800}
-.nav{
-  bottom:0;
-  padding:8px 7px calc(8px + env(safe-area-inset-bottom));
-  background:rgba(255,255,255,.96);
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  border-top:1px solid #dfe9e6;
-  box-shadow:0 -5px 18px #0000000b;
-}
-.nav button{
-  min-width:62px;
-  min-height:48px;
-  border-radius:13px;
-  padding:4px 6px;
-  color:#647472;
-  font-weight:700;
-}
-.nav button:active{background:#edf6f3}
-.nav button.btn{background:transparent;padding:4px 6px}
-.nav b{font-size:21px}
-input,select,textarea{
-  min-height:48px;
-  font-size:16px;
-  border-radius:14px;
-}
-button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.modal{
-  padding-top:env(safe-area-inset-top);
-}
-.sheet{
-  width:100%;
-  max-width:560px;
-  border-radius:25px 25px 0 0;
-  padding:18px 16px calc(12px + env(safe-area-inset-bottom));
-  max-height:94vh;
-}
-.modal-close-bar{
-  padding-bottom:env(safe-area-inset-bottom);
-}
-.modal-close-bar .btn{min-height:50px}
-.appt-tabs button{min-height:46px}
-.appt-card{min-height:48px}
-@media (min-width:900px){
-  body{background:#eef3f2;padding-top:0}
+.tools-row span{display:block;font-size:20px;margin-bottom:4px}
+.section{font-size:18px;margin:20px 2px 9px}
+#appointments.card,#tomorrowAppointments.card,#customers.card{border:1px solid #e1eae8;box-shadow:0 4px 15px #00000008}
+.nav{padding:8px 5px calc(8px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.nav button{min-height:48px;min-width:58px;border-radius:13px}
+@media(min-width:900px){
   .app{max-width:1180px;padding:30px 36px 110px}
-  #main .app>h1{font-size:32px}
-  .grid{grid-template-columns:repeat(6,1fr);gap:14px}
-  .grid .btn{min-height:92px}
-  .home-date-card,.home-stats{max-width:760px}
-  .home-stats{grid-template-columns:repeat(3,180px)}
+  .home-head h1{font-size:32px}
+  .hero-card{max-width:760px}
+  .quick-grid{max-width:760px;grid-template-columns:repeat(4,1fr)}
+  .tools-row{max-width:760px;grid-template-columns:repeat(4,1fr)}
 }
 
 </style>
@@ -197,27 +91,43 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </div></div>
 
 <div id="main" style="display:none"><div class="app">
-<button class="logout" onclick="logout()">Çıkış</button>
-<h1>🐾 Cabi Pet Kuaför</h1><div class="muted">Randevu · Müşteri · İşlem Geçmişi</div>
-<div id="homeDateCard" class="home-date-card">
-  <div class="date-title">BUGÜN</div>
-  <div id="homeDateMain" class="date-main">Cabi Pet Kuaför</div>
-  <div class="date-sub">Günün randevularını ve hızlı işlemleri buradan yönet.</div>
-</div>
-<div class="home-stats">
-  <div class="home-stat"><div id="homeApptStat" class="num">0</div><div class="lbl">Bugünkü Randevu</div></div>
-  <div class="home-stat"><div id="homeCustomerStat" class="num">0</div><div class="lbl">Aktif Müşteri</div></div>
-  <div class="home-stat"><div id="homeRevenueStat" class="num">0 ₺</div><div class="lbl">Bugünkü Ciro</div></div>
+<div class="home-head">
+  <div>
+    <div class="home-eyebrow">PATİLERE ÖZEL BUTİK HİZMET</div>
+    <h1>🐾 Cabi Pet Kuaför</h1>
+    <div class="muted">Randevularını kolayca yönet</div>
+  </div>
+  <button class="profile-btn" onclick="openSettings()" aria-label="Ayarlar">⚙️</button>
 </div>
 
-<div class="grid">
-<button class="btn primary" onclick="openAppt()">➕<br>Yeni Randevu</button>
-<button class="btn" onclick="openCustomer()">👤<br>Yeni Müşteri</button>
-<button class="btn" onclick="focusSearch()">🔍<br>Müşteri Ara</button>
-<button class="btn" onclick="openCalendar()">🗓️<br>Takvim</button>
-<button class="btn" onclick="openFreeSlots()">🟢<br>Boş Saatler</button>
-<button class="btn" onclick="openRevenue()">💰<br>Ciro</button><button class="btn" onclick="openPortfolio()">🐾<br>Portföy</button><button class="btn" onclick="openSales()">🛍️<br>Satış</button>
-<button class="btn" onclick="openSettings()">⚙️<br>Ayarlar</button>
+<div class="hero-card">
+  <div class="hero-top">
+    <div>
+      <div class="hero-label">BUGÜN</div>
+      <div id="homeDateMain" class="hero-date">Cabi Pet Kuaför</div>
+    </div>
+    <div class="hero-paw">🐾</div>
+  </div>
+  <div class="hero-bottom">
+    <span id="heroApptText">0 randevu</span>
+    <span>•</span>
+    <span id="heroRevenueText">0 ₺ ciro</span>
+  </div>
+</div>
+
+<div class="quick-title">Hızlı İşlemler</div>
+<div class="quick-grid">
+  <button class="quick primary" onclick="openAppt()"><span>＋</span><b>Yeni Randevu</b><small>Hızlıca ekle</small></button>
+  <button class="quick" onclick="focusSearch()"><span>⌕</span><b>Müşteri Ara</b><small>Kaydı bul</small></button>
+  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Günü görüntüle</small></button>
+  <button class="quick" onclick="openFreeSlots()"><span>◷</span><b>Boş Saatler</b><small>Uygun saatleri gör</small></button>
+</div>
+
+<div class="tools-row">
+  <button onclick="openCustomer()"><span>👤</span> Yeni Müşteri</button>
+  <button onclick="openRevenue()"><span>₺</span> Ciro</button>
+  <button onclick="openSales()"><span>🛍️</span> Satış</button>
+  <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
 </div>
 <div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
 <div id="appointments" class="card"></div>
@@ -262,7 +172,6 @@ async function loadAll(){
 }
 function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll()).subscribe()}
 function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
-
 function updateHomeSummary(){
   let d=localDateStr(0);
   let today=db.appointments.filter(a=>a.appointment_date===d);
@@ -270,13 +179,12 @@ function updateHomeSummary(){
   let revenue=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
   let dateObj=new Date(d+'T12:00:00');
   let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  let el=$('homeDateMain'); if(el)el.textContent=dateText.charAt(0).toUpperCase()+dateText.slice(1);
-  el=$('homeApptStat'); if(el)el.textContent=today.length;
-  el=$('homeCustomerStat'); if(el)el.textContent=db.customers.filter(c=>!c.deleted_at).length;
-  el=$('homeRevenueStat'); if(el)el.textContent=Number(revenue).toLocaleString('tr-TR')+' ₺';
+  dateText=dateText.charAt(0).toUpperCase()+dateText.slice(1);
+  let el=$('homeDateMain');if(el)el.textContent=dateText;
+  el=$('heroApptText');if(el)el.textContent=today.length+' randevu';
+  el=$('heroRevenueText');if(el)el.textContent=Number(revenue).toLocaleString('tr-TR')+' ₺ ciro';
 }
 function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary()}
-
 function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
 function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
 function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn primary" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
