@@ -32,4 +32,4 @@ jobs:
         with:
           name: cabi-pet-kuafor-yedek-${{ github.run_id }}
           path: backup/*.dump
-          retention-days: 7
+          retention-days: 30
