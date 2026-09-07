@@ -337,7 +337,7 @@ function trSearch(v){
 function updateHomeSummary(){
   let d=localDateStr(0);
   let today=db.appointments.filter(a=>a.appointment_date===d);
-  let valid=today.filter(a=>!['Gelmedi','İptal'].includes(a.status||'Bekliyor'));
+  let valid=today.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
   let revenueAppts=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
   let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
   let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
@@ -683,7 +683,7 @@ function monthlyRevenue(offset=0){
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
-    let revenueAppts=appts.filter(a=>!['Gelmedi','İptal'].includes(a.status||'Bekliyor'));
+    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
     let sales=(db.sales||[]).filter(s=>s.sale_date && s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
     let salesTotal=sales.reduce((sum,x)=>sum+(Number(x.price)||0),0);
@@ -711,7 +711,7 @@ function monthlyRevenue(offset=0){
   let services={};
   db.appointments.forEach(a=>{
     if(!a.appointment_date || !a.appointment_date.startsWith(year+'-')) return;
-    if(['Gelmedi','İptal'].includes(a.status||'Bekliyor')) return;
+    if((a.status||'Bekliyor')!=='Geldi') return;
     let n=(a.service||'Diğer').trim()||'Diğer';
     services[n]=(services[n]||0)+(Number(a.price)||0);
   });
