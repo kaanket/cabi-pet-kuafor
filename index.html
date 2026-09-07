@@ -363,9 +363,9 @@ function restoreTodayHero(){
   try{if(localStorage.getItem('cabi_today_hero_collapsed')==='1')el.classList.add('hero-collapsed')}catch(e){}
 }
 function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary();restoreTodayHero()}
-function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select><br><button class="btn whatsapp-btn" style="margin-top:6px;padding:8px 12px" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">📱 WhatsApp</button></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
+function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select><br><button class="btn whatsapp-btn" style="margin-top:6px;padding:8px 12px" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">📱 WhatsApp</button><button class="btn whatsapp-btn" style="margin-top:6px;padding:8px 12px" onclick="event.stopPropagation();whatsappReady('${x.id}')">🐾 Hazır</button></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
 function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
-function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn whatsapp-btn" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
+function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><button class="btn whatsapp-btn" style="padding:10px 12px" onclick="whatsappAppointment('${x.id}')">📱 WhatsApp</button><button class="btn whatsapp-btn" style="margin-top:6px;padding:8px 12px" onclick="event.stopPropagation();whatsappReady('${x.id}')">🐾 Hazır</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
 function missedCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='Gelmedi').length}
 function cancelCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='İptal').length}
 function isRisky(customerId){return missedCount(customerId)>=2}
@@ -505,6 +505,25 @@ function whatsappAppointment(apptId){
     text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere. '+paw;
   }else{
     text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması'+nl+nl+'Evcil Hayvan: '+c.pet_name+nl+'Randevu Tarihi: '+date+nl+(time?'Randevu Saati: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
+  }
+  window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
+}
+function whatsappReady(apptId){
+  let upcoming=db.appointments.find(a=>a.id===apptId);
+  if(!upcoming)return alert('Randevu bulunamadı.');
+  let c=db.customers.find(x=>x.id===upcoming.customer_id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let ph=(c.phone||'').replace(/\D/g,'');
+  if(ph.startsWith('0'))ph='90'+ph.slice(1);
+  if(!ph)return alert('Telefon numarası kayıtlı değil.');
+  let nl=String.fromCharCode(10);
+  let isIPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  let text;
+  if(isIPhone){
+    const paw='\uD83D\uDC3E';
+    text='Merhaba '+c.owner_name+', '+c.pet_name+'\'in işlemi tamamlandı ve teslim için hazır. '+paw+nl+nl+'Görüşmek üzere. '+paw;
+  }else{
+    text='Merhaba '+c.owner_name+', '+c.pet_name+'\'in işlemi tamamlandı ve teslim için hazır.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
   }
   window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
 }
