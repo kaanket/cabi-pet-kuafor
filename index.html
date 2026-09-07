@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
+<!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <title>Cabi Pet Kuaför</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -537,7 +538,7 @@ function whatsapp(id){
 }
 
 function openCalendar(){let d=localDateStr(0);$('modalTitle').textContent='Takvim';$('modalBody').innerHTML=`<input id="cal" type="date" value="${d}" onchange="calendarDay(this.value)"><div id="calList"></div>`;$('modal').style.display='flex';calendarDay(d)}
-function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>`<div class="row" style="${['İptal','Gelmedi'].includes(x.status)?'background:#fff0f0;border-left:5px solid #dc2626;border-radius:10px;padding-left:12px;':''}"><div><b>${(x.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).owner_name||'')}${(db.customers.find(c=>c.id===x.customer_id)||{}).deleted_at?' · Silinmiş müşteri':''}${['İptal','Gelmedi'].includes(x.status)?' · '+esc(x.status):''}</b><br><small>${petTypeLabel(db.customers.find(c=>c.id===x.customer_id)||{})} · ${esc((db.customers.find(c=>c.id===x.customer_id)||{}).pet_name||'')} · ${esc(x.service)} · <strong>${Number(x.price||0).toLocaleString('tr-TR')} ₺</strong></small></div><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div>`).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
+function calendarDay(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('calList').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};let st=x.status||'Bekliyor';let price=Number(x.price||0).toLocaleString('tr-TR')+' ₺';let red=['İptal','Gelmedi'].includes(st);return `<div class="row" style="${red?'background:#fff0f0;border-left:5px solid #dc2626;border-radius:10px;padding-left:12px;':''}"><div style="flex:1;min-width:0"><b>${(x.appointment_time||'').slice(0,5)} · ${esc(c.owner_name||'')}</b>${red?` <span style="color:#b91c1c;font-weight:700">· ${esc(st)}</span>`:''}${c.deleted_at?' · Silinmiş müşteri':''}<br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><strong style="font-size:15px;white-space:nowrap">${price}</strong><button class="btn" style="padding:8px" onclick="editAppt('${x.id}')">Düzenle</button></div></div>`}).join(''):'<div class="empty">Bu tarihte randevu yok.</div>'}
 function freeDateLabel(date){
   let d=new Date(date+'T12:00:00');
   return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
