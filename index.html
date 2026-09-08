@@ -797,6 +797,32 @@ function monthlyRevenue(offset=0){
     saleRows[n]=(saleRows[n]||0)+(Number(s.price)||0);
   });
   let saleEntries=Object.entries(saleRows).sort((a,b)=>b[1]-a[1]);
+  // Yoğunluk analizi: seçili yılda gerçekleşen (Geldi) randevuların haftanın günlerine dağılımı
+  let weekdayNames=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+  let weekdayShort=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  let weekdayCounts=[0,0,0,0,0,0,0];
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-') || (a.status||'Bekliyor')!=='Geldi') return;
+    let d=new Date(a.appointment_date+'T12:00:00');
+    let idx=(d.getDay()+6)%7;
+    weekdayCounts[idx]++;
+  });
+  let maxWeekday=Math.max(...weekdayCounts,1);
+  let busiestIdx=weekdayCounts.indexOf(Math.max(...weekdayCounts));
+  html+='<h3 style="margin:18px 0 10px">📊 En Yoğun Günler</h3>';
+  html+='<div class="card" style="padding:14px">'+
+    '<div class="muted" style="margin-bottom:12px">'+year+' yılında durumu <b>Geldi</b> olan randevulara göre.</div>'+
+    weekdayCounts.map((count,i)=>{
+      let w=count/maxWeekday*100;
+      return '<div style="display:grid;grid-template-columns:56px 1fr 32px;align-items:center;gap:8px;margin:9px 0">'+
+        '<b style="font-size:12px">'+weekdayShort[i]+'</b>'+
+        '<div style="height:12px;background:#edf1f1;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+w+'%;background:#15947f;border-radius:10px"></div></div>'+
+        '<b style="text-align:right;font-size:13px">'+count+'</b>'+
+      '</div>';
+    }).join('')+
+    '<div class="muted" style="margin-top:10px;font-size:12px">🏆 En yoğun gün: <b>'+weekdayNames[busiestIdx]+'</b> · '+weekdayCounts[busiestIdx]+' randevu</div>'+
+  '</div>';
+
   html+='<div style="display:flex;gap:8px;margin-top:18px"><button class="btn" style="flex:1" onclick="openSales()">🛍️ Satış Ekle</button><button class="btn" style="flex:1" onclick="openSalesHistory()">📋 Satış Geçmişi</button></div>';
   if(saleEntries.length){
     html+='<h3 style="margin:18px 0 10px">🛍️ Ürün Satışları</h3>';
