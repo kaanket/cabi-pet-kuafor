@@ -285,7 +285,7 @@ input:focus,select:focus,textarea:focus{
 <button type="button" onclick="clearCustomerSearch()" aria-label="Tüm müşterileri göster" style="width:42px;height:42px;border:0;border-radius:12px;background:#eef3f2;color:#536563;font-size:22px;font-weight:700">×</button>
 <button type="button" onclick="toggleCustomerFilter()" aria-label="Müşteri filtreleri" class="btn" style="padding:10px 13px">☰ Filtre</button>
 </div>
-<div id="customerFilter" style="display:none;margin-top:10px;padding:10px;border:1px solid #dce9e6;border-radius:14px;background:#f7fbfa">
+<div id="customerFilter" style="display:none;position:absolute;top:52px;right:0;z-index:50;width:min(92vw,700px);padding:10px;border:1px solid #dce9e6;border-radius:14px;background:#f7fbfa;box-shadow:0 12px 28px rgba(24,53,50,.12)">
 <div style="display:flex;gap:7px;flex-wrap:wrap">
 <button class="btn" onclick="setCustomerFilter('all')">Tümü</button>
 <button class="btn" onclick="setCustomerFilter('loyal')">⭐ Sadık 5+</button>
@@ -394,7 +394,7 @@ function isLoyal(customerId){return loyalCount(customerId)>=5}
 let customerFilter='all';
 function customerTier(id){let n=loyalCount(id);return n>=5?'loyal':(n>=3?'regular':(n>=1?'new':'none'))}
 function toggleCustomerFilter(){let e=$('customerFilter');e.style.display=e.style.display==='none'?'block':'none'}
-function setCustomerFilter(v){customerFilter=v;renderCustomers();$('customerFilter').style.display='block'}
+function setCustomerFilter(v){customerFilter=v;renderCustomers();$('customerFilter').style.display='none'}
 function customerRow(x){let n=missedCount(x.id),risk=n>=2,loyal=loyalCount(x.id),tier=customerTier(x.id);let type=String(x.pet_type||'').trim().toLowerCase();let typeLabel=type==='kedi'?'🐱 Kedi':(type==='köpek'||type==='kopek'?'🐶 Köpek':'🐾 Tür yok');let badge=tier==='loyal'?'<span class="risk-badge" style="background:#e7f7f1;color:#126b59">⭐ Sadık</span>':tier==='regular'?'<span class="risk-badge" style="background:#fff0f3;color:#b34b64">❤️ Düzenli</span>':tier==='new'?'<span class="risk-badge" style="background:#eef3f2;color:#536563">👤 Yeni</span>':'';return `<div class="row"><div onclick="detail('${x.id}')" style="cursor:pointer;flex:1"><b>${esc(x.owner_name||'')}</b>${badge}${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>${typeLabel} · ${esc(x.pet_name||'')} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small><br><small style="color:${tier==='loyal'?'#126b59':'#71807f'}">${loyal} kez geldi · Son 12 ay</small>${n?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`}
 function renderCustomers(){let q=trSearch($('search').value);let c=db.customers.filter(x=>!x.deleted_at && (!q || trSearch(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed+' '+x.pet_type).includes(q)));if(customerFilter!=='all')c=c.filter(x=>customerFilter==='risk'?isRisky(x.id):customerTier(x.id)===customerFilter);c=c.sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr')).slice(0,50);$('customers').innerHTML=c.length?c.map(customerRow).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
 function clearCustomerSearch(){ $('search').value=''; customerFilter='all'; renderCustomers(); }
