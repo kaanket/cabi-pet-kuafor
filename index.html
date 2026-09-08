@@ -392,6 +392,7 @@ function loyalCount(customerId){
 function isLoyal(customerId){return loyalCount(customerId)>=5}
 
 let customerFilter='all';
+let customerListVisible=false;
 function customerTier(id){let n=loyalCount(id);return n>=5?'loyal':(n>=3?'regular':(n>=1?'new':'none'))}
 function toggleCustomerFilter(){let e=$('customerFilter');e.style.display=e.style.display==='none'?'block':'none'}
 function setCustomerFilter(v){customerFilter=v;customerListVisible=true;renderCustomers();$('customerFilter').style.display='none'}
