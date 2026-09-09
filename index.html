@@ -127,8 +127,7 @@ body{background:#f5f8f7}
 }
 
 
-.sales-history-list{height:min(30vh,500px);max-height:500px;overflow-y:auto;overflow-x:hidden;padding:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
-@media(max-width:600px){.sales-history-list{height:30vh;max-height:500px;min-height:180px}}
+.sales-history-list{max-height:52vh;overflow-y:auto;overflow-x:hidden;padding:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
 </style>
 
 <style>
@@ -650,18 +649,42 @@ async function deleteSale(id){
 
 async function openSalesHistory(){
   let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  let recent=sales.slice(0,4);
 
   $('modalTitle').textContent='🛍️ Satışlar';
-  $('modalBody').innerHTML=sales.length?`<div class="sales-history-list">${sales.map(s=>`
-    <div class="row">
-      <div><b>${esc(s.product_name||'')}</b><br>
-      <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
-        <button class="btn" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+  $('modalBody').innerHTML=recent.length?
+    `<div class="sales-preview-list">${recent.map(s=>`
+      <div class="row">
+        <div><b>${esc(s.product_name||'')}</b><br>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+        </div>
       </div>
-    </div>
-  `).join('')}</div>`:'<div class="card">Henüz ürün satışı yok.</div>';
+    `).join('')}</div>`:
+    '<div class="card">Henüz ürün satışı yok.</div>';
+
+  if(sales.length>4){
+    $('modalBody').innerHTML += `<button class="btn" style="width:100%;margin-top:12px" onclick="openAllSales()">📋 Tüm Satışları Gör</button>`;
+  }
+  $('modal').style.display='flex';
+}
+
+function openAllSales(){
+  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  $('modalTitle').textContent='🛍️ Tüm Satışlar';
+  $('modalBody').innerHTML=sales.length?
+    `<div class="sales-history-list">${sales.map(s=>`
+      <div class="row">
+        <div><b>${esc(s.product_name||'')}</b><br>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+          <button class="btn" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+        </div>
+      </div>
+    `).join('')}</div>`:
+    '<div class="card">Henüz ürün satışı yok.</div>';
   $('modal').style.display='flex';
 }
 
