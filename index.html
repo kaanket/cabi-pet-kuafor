@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#15947f">
+<!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
+<!-- V49: Randevu ödeme yöntemi — Nakit / Kart -->
+<title>Cabi Pet Kuaför</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#173535;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}.app{max-width:500px;margin:auto;min-height:100vh;padding:20px 16px 100px}h1{margin:5px 0;font-size:27px}.muted{color:#71807f}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}.btn{border:0;border-radius:17px;padding:16px 12px;font-weight:700;font-size:15px;background:#dff4ef;color:#174b45}.primary{background:#15947f;color:#fff}.card{background:#fff;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 3px 14px #0000000a}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 0;border-bottom:1px solid #edf1f0}.row:last-child{border:0}.tag{background:#eef7f5;padding:7px 10px;border-radius:10px;font-size:12px}.section{font-weight:800;font-size:19px;margin:22px 2px 10px}input,select,textarea{width:100%;padding:14px;border:1px solid #dce5e3;border-radius:13px;font-size:16px;margin:5px 0 10px;background:#fff}label{font-size:13px;font-weight:700}.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:5}.sheet{background:#f7f9f8;width:100%;max-width:500px;margin:auto;border-radius:24px 24px 0 0;padding:20px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column}.modal-body-scroll{overflow:auto;min-height:0;padding-bottom:18px;-webkit-overflow-scrolling:touch}.modal-close-bar{padding:10px 0 0;background:#f7f9f8;border-top:1px solid #e5ecea;flex:none;position:sticky;bottom:0;z-index:20}.modal-close-bar .btn{width:100%;padding:14px}.sheet h2{margin:0 0 15px}.actions{display:flex;gap:10px}.actions button{flex:1}.danger{background:#ffe8e8;color:#a33}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e7eceb;padding:9px 4px;display:flex;justify-content:space-around;z-index:4}.nav button{border:0;background:none;color:#657574;font-size:11px}.nav b{display:block;font-size:20px;margin-bottom:2px}.empty{padding:15px 0;color:#748381}.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:25px}.auth .card{width:100%;max-width:420px}.status{font-size:12px;margin-top:8px}.success{color:#14866f}.error{color:#b33}.logout{float:right;border:0;background:#eef7f5;border-radius:10px;padding:7px 10px}.risk-badge{display:inline-block;background:#ffe8e8;color:#a33;border-radius:10px;padding:5px 8px;font-size:11px;font-weight:800;margin-left:5px}.warning-card{background:#fff4d6;border:1px solid #f1d98b;color:#765600;border-radius:14px;padding:12px;margin:10px 0}
+
+@media (min-width: 900px){
+  body{background:#eef3f2}
+  .app{max-width:1180px;padding:32px 36px 110px}
+  .app>h1{font-size:32px}
+  .grid{grid-template-columns:repeat(6,1fr);gap:14px;margin:26px 0}
+  .grid .btn{min-height:92px;font-size:15px}
+  #appointments.card,#customers.card{padding:22px}
+  .section{font-size:21px}
+  #customers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
+  #customers .row{padding:15px 4px}
+  .nav{max-width:1180px;left:50%;right:auto;transform:translateX(-50%);border:1px solid #e2e9e7;border-radius:18px 18px 0 0;padding:10px 18px}
+  .modal{align-items:center}
+  .sheet{max-width:760px;border-radius:24px;max-height:88vh}
+}
+
+
+.appt-tabs{display:flex;gap:7px;margin:10px 0}.appt-tabs button{flex:1;padding:10px;border:1px solid #dce5e3;background:#fff;border-radius:12px;font-weight:700;color:#174b45}.appt-tabs button.active{background:#15947f;color:#fff;border-color:#15947f}.appt-week{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto;padding-bottom:6px}.appt-day{background:#f8fbfa;border:1px solid #e2eae8;border-radius:14px;min-height:300px;padding:8px}.appt-day-head{font-weight:800;text-align:center;padding:6px;border-bottom:1px solid #e5ecea;margin-bottom:6px}.appt-slot{min-height:54px;border:1px dashed #dce5e3;border-radius:10px;margin:5px 0;padding:5px}.appt-card{background:#fff;border:1px solid #dfe8e6;border-radius:10px;padding:7px;cursor:grab;box-shadow:0 2px 8px #0000000a}.appt-card:active{cursor:grabbing}.appt-card small{display:block;color:#71807f}.status-select{border:0!important;margin:0!important;padding:7px 9px!important;width:auto!important;font-size:12px!important;font-weight:700}.status-bekliyor{background:#fff4d6!important}.status-geldi{background:#e5f3ff!important}.status-islemde{background:#eee8ff!important}.status-tamamlandi{background:#e3f7ed!important}.status-gelmedi{background:#ffe8e8!important}.appt-day-drop{min-height:44px}.appt-month{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.month-cell{min-height:78px;background:#fff;border:1px solid #e4ebe9;border-radius:10px;padding:6px;cursor:pointer}.month-cell b{font-size:12px}.month-cell .mini{font-size:11px;margin-top:4px}.month-cell.today{border:2px solid #159b89}.month-title{display:flex;justify-content:space-between;align-items:center;margin:10px 0}.drag-hint{font-size:11px;color:#71807f;margin:5px 0 10px}
+@media(max-width:899px){.appt-week{grid-template-columns:repeat(7,150px)}.appt-month{min-width:650px}.month-wrap{overflow-x:auto}}
+
+/* ===== Cabi Pet Kuaför — Ana Ekran V2 ===== */
+body{background:#f5f8f7}
+.app{max-width:560px;padding:16px 16px calc(92px + env(safe-area-inset-bottom))}
+.home-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+.home-head h1{font-size:28px;letter-spacing:-.7px;margin:2px 0 3px}
+.home-eyebrow{font-size:10px;letter-spacing:1.2px;font-weight:800;color:#15947f}
+.profile-btn{width:44px;height:44px;border:1px solid #dfe9e6;border-radius:15px;background:#fff;font-size:20px;box-shadow:0 4px 12px #00000009}
+.hero-card{
+  border-radius:25px;padding:19px 19px 16px;
+  background:linear-gradient(135deg,#146f62 0%,#15947f 55%,#28aa92 100%);
+  color:#fff;box-shadow:0 12px 28px #15947f25;margin-bottom:18px
+}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start}
+.hero-label{font-size:11px;font-weight:800;letter-spacing:1px;opacity:.82}
+.hero-date{font-size:21px;font-weight:800;margin-top:5px;line-height:1.2}
+.hero-paw{font-size:34px;opacity:.9}
+.hero-bottom{display:flex;gap:8px;margin-top:16px;font-size:13px;font-weight:700;opacity:.92}
+.quick-title{font-size:18px;font-weight:850;margin:18px 2px 10px}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick{
+  min-height:91px;border:1px solid #dfe9e6;border-radius:19px;background:#fff;
+  padding:14px;text-align:left;box-shadow:0 4px 14px #00000008;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;color:#173f3c
+}
+.quick:active,.tools-row button:active,.profile-btn:active{transform:scale(.98)}
+.quick span{font-size:25px;line-height:1;margin-bottom:4px;color:#15947f;font-weight:800}
+.quick b{font-size:15px}
+.quick small{font-size:11px;color:#7a8987}
+.quick.primary{background:#15947f;border-color:#15947f;color:#fff;box-shadow:0 8px 20px #15947f2b}
+.quick.primary span,.quick.primary small{color:#fff}
+ .tools-row{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:11px 0 20px
+}
+.tools-row button{
+  min-height:67px;border:1px solid #e0e9e7;background:#fff;border-radius:16px;
+  color:#294f4b;font-size:11px;font-weight:750;padding:7px 3px;
+  box-shadow:0 3px 10px #00000007
+}
+.tools-row span{display:block;font-size:20px;margin-bottom:4px}
+.section{font-size:18px;margin:20px 2px 9px}
+#appointments.card,#tomorrowAppointments.card,#customers.card{border:1px solid #e1eae8;box-shadow:0 4px 15px #00000008}
+.nav{padding:8px 5px calc(8px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.nav button{min-height:48px;min-width:58px;border-radius:13px}
+@media(min-width:900px){
+  .app{max-width:1180px;padding:30px 36px 110px}
+  .home-head h1{font-size:32px}
+  .hero-card{max-width:760px}
+  .quick-grid{max-width:760px;grid-template-columns:repeat(4,1fr)}
+  .tools-row{max-width:950px;grid-template-columns:repeat(5,1fr)}
+}
+
+
+/* ===== V3 — Profesyonel alt navigasyon ===== */
+.nav{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  align-items:center;
+  gap:2px;
+  max-width:560px;
+  margin:0 auto;
+  padding:7px 8px calc(7px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.97);
+  border-top:1px solid #dfe9e6;
+  box-shadow:0 -7px 22px #0000000b;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.nav button{
+  min-width:0;
+  min-height:54px;
+  border:0;
+  border-radius:15px;
+  background:transparent;
+  color:#71807f;
+  font-size:11px;
+  font-weight:700;
+  padding:5px 2px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+}
+.nav button b{
+  display:block;
+  font-size:20px;
+  line-height:21px;
+  margin:0;
+  font-weight:800;
+}
+.nav button span{display:block;line-height:15px}
+.nav button:active{background:#edf6f3;transform:scale(.97)}
+.nav button:first-child{color:#15947f}
+@media(min-width:900px){
+  .nav{max-width:1180px;border-radius:18px 18px 0 0;padding:9px 24px calc(9px + env(safe-area-inset-bottom))}
+}
+
+
+.sales-history-list{max-height:52vh;overflow-y:auto;overflow-x:hidden;padding:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
+
+/* V49 — Ödeme yöntemi */
+.payment-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:5px 0 10px}
+.payment-option{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 10px;border:1px solid #dce5e3;border-radius:13px;background:#fff;color:#173535;font-size:15px;font-weight:750;cursor:pointer}
+.payment-option:has(input:checked){background:#e5f5f1;border-color:#15947f;color:#126b5f;box-shadow:inset 0 0 0 1px #15947f}
+.payment-option input{width:18px;height:18px;margin:0;accent-color:#15947f}
+
+/* V53: Takvim mobil yatay kaymayı engelle */
+#calView{width:100%;min-width:0;max-width:100%;overflow-x:hidden}
+.appt-slot{min-width:0;max-width:100%;overflow:hidden}
+.appt-card{min-width:0;max-width:100%;overflow:hidden;word-break:break-word}
+.month-title{width:100%;min-width:0}
+@media (max-width:600px){
+  .sheet{width:100vw;max-width:100vw;overflow:hidden}
+  .modal-body-scroll{width:100%;min-width:0;overflow-x:hidden}
+  #calView{overflow-x:hidden}
+  .appt-week{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  .appt-day{min-width:120px}
+}
+</style>
+
+<style>
+/* ===== V8 — Premium mint / petrol renk paleti ===== */
+:root{
+  --cabi-deep:#155E58;
+  --cabi-primary:#197A70;
+  --cabi-mint:#68B9A9;
+  --cabi-soft:#EAF6F3;
+  --cabi-bg:#F3F8F7;
+  --cabi-text:#183532;
+  --cabi-muted:#6F817E;
+  --cabi-border:#DCE9E6;
+}
+body{background:var(--cabi-bg);color:var(--cabi-text)}
+.app{background:transparent}
+.muted{color:var(--cabi-muted)}
+.card{border:1px solid var(--cabi-border);box-shadow:0 5px 18px #155e580b}
+.btn{background:var(--cabi-soft);color:var(--cabi-deep)}
+.btn.primary,.primary{background:var(--cabi-primary);color:#fff}
+.hero-card{
+  background:linear-gradient(135deg,var(--cabi-deep) 0%,var(--cabi-primary) 58%,#3B9D8D 100%);
+  box-shadow:0 12px 30px #155e5828;
+}
+.home-eyebrow{color:var(--cabi-primary)}
+.profile-btn{border-color:var(--cabi-border);box-shadow:0 4px 12px #155e580d}
+.quick{
+  border-color:var(--cabi-border);
+  box-shadow:0 5px 16px #155e580b;
+  color:var(--cabi-text);
+}
+.quick span{color:var(--cabi-primary)}
+.quick.primary{
+  background:var(--cabi-primary);
+  border-color:var(--cabi-primary);
+  box-shadow:0 9px 22px #197a702b;
+}
+.tools-row button{
+  border-color:var(--cabi-border);
+  color:#28524D;
+  box-shadow:0 4px 12px #155e5809;
+}
+.tools-row button:active,.quick:active,.profile-btn:active{
+  background:#E5F3F0;
+}
+.nav{
+  border-top-color:var(--cabi-border);
+  box-shadow:0 -8px 24px #155e5810;
+}
+.nav button:first-child{color:var(--cabi-primary)}
+.nav button:active{background:#E8F5F2}
+.tag{background:#E8F4F1;color:var(--cabi-deep)}
+.status-bekliyor{background:#FFF1D8!important}
+.status-geldi{background:#E3F1FF!important}
+.status-gelmedi{background:#FFE7E7!important}
+.status-select{color:#294944}
+.section{color:var(--cabi-text)}
+input,select,textarea{
+  border-color:var(--cabi-border);
+  color:var(--cabi-text);
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--cabi-mint);
+  box-shadow:0 0 0 3px #68B9A922;
+}
+.modal{background:#0D373355}
+.sheet{background:#F6FAF9}
+.modal-close-bar{background:#F6FAF9;border-top-color:var(--cabi-border)}
+.warning-card{background:#FFF5DA;border-color:#EBD58F}
+.danger{background:#FFE9E9;color:#A33}
+.logout{background:#E8F4F1;color:var(--cabi-deep)}
+</style>
+
+<style>
+.hero-card{position:relative;overflow:hidden;transition:max-height .28s ease,padding .28s ease,box-shadow .28s ease}
+.hero-toggle{position:absolute;right:16px;top:14px;z-index:3;width:36px;height:36px;border:1px solid #ffffff55;border-radius:50%;background:#ffffff1c;color:#fff;font-size:20px;font-weight:800;cursor:pointer;line-height:1}
+.hero-toggle:active{transform:scale(.94)}
+.hero-card.hero-collapsed{max-height:58px!important;padding-top:11px!important;padding-bottom:11px!important;box-shadow:0 7px 18px #155e5818}
+.hero-card.hero-collapsed .hero-top,.hero-card.hero-collapsed .hero-bottom{display:none}
+.hero-card.hero-collapsed .hero-toggle{top:11px;right:12px;transform:rotate(180deg)}
+</style>
+<style>
+/* V14: BUGÜN bannerı yalnızca MacBook/masaüstünde açılıp kapanabilir */
+.hero-toggle{display:block}
+@media (pointer:coarse), (max-width:899px){
+  .hero-toggle{display:none!important}
+  .hero-card.hero-collapsed{max-height:none!important;padding-top:32px!important;padding-bottom:32px!important}
+  .hero-card.hero-collapsed .hero-top,.hero-card.hero-collapsed .hero-bottom{display:block}
+}
+</style>
+<style>
+.appt-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-top:8px;flex-wrap:wrap}
+.whatsapp-btn{padding:7px 10px;font-size:12px;background:#e8f5f2;color:#155e58;border:1px solid #d5ebe6}
+</style>
+</head>
+<body>
+<div id="auth" class="auth"><div class="card">
+<h1>🐾 Cabi Pet Kuaför</h1><p class="muted">Bulut randevu defteri</p>
+<label>E-posta</label><input id="email" type="email" autocomplete="email" placeholder="ornek@mail.com">
+<label>Şifre</label><input id="password" type="password" autocomplete="current-password" placeholder="En az 6 karakter">
+<div class="actions"><button class="btn primary" onclick="login()">Giriş Yap</button><button class="btn" onclick="signup()">Kayıt Ol</button></div>
+<div id="authMsg" class="status"></div>
+</div></div>
+
+<div id="main" style="display:none"><div class="app">
+<div class="home-head">
+  <div>
+    <div class="home-eyebrow">PATİLERE ÖZEL BUTİK HİZMET</div>
+    <h1>🐾 Cabi Pet Kuaför</h1>
+    <div class="muted">Randevularını kolayca yönet</div>
+  </div>
+  <button class="profile-btn" onclick="openSettings()" aria-label="Ayarlar">⚙️</button>
+</div>
+
+<div class="hero-card" id="todayHero"><button class="hero-toggle" onclick="toggleTodayHero()" aria-label="Bugün bilgisini aç/kapat">⌃</button>
+  <div class="hero-top">
+    <div>
+      <div class="hero-label">BUGÜN</div>
+      <div id="homeDateMain" class="hero-date">Cabi Pet Kuaför</div>
+    </div>
+    <div class="hero-paw">🐾</div>
+  </div>
+  <div class="hero-bottom">
+    <span id="heroApptText">0 randevu</span>
+    <span>•</span>
+    <span id="heroRevenueText">0 ₺ ciro</span>
+  </div>
+</div>
+
+<div class="quick-title">Hızlı İşlemler</div>
+<div class="quick-grid">
+  <button class="quick primary" onclick="openAppt()"><span>＋</span><b>Yeni Randevu</b><small>Hızlıca ekle</small></button>
+  <button class="quick" onclick="focusSearch()"><span>⌕</span><b>Müşteri Ara</b><small>Kaydı bul</small></button>
+  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Günü görüntüle</small></button>
+  <button class="quick" onclick="openFreeSlots()"><span>◷</span><b>Boş Saatler</b><small>Uygun saatleri gör</small></button>
+</div>
+
+<div class="tools-row">
+  <button onclick="openCustomer()"><span>👤</span> Yeni Müşteri</button>
+  <button onclick="openRevenue()"><span>₺</span> Ciro</button>
+  <button onclick="openSales()"><span>🛍️</span> Satış</button>
+  <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
+  <button onclick="openLostCustomers()"><span>🔴</span> Kayıp Müşteriler</button>
+</div>
+<div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
+<div id="appointments" class="card"></div>
+<div class="section">📲 Yarınki Randevular <span id="tomorrowCount" class="muted"></span></div>
+<div id="tomorrowAppointments" class="card"></div>
+<div class="section" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+  <span>Müşteri Ara</span>
+  <button class="btn primary" style="padding:8px 12px;font-size:12px" onclick="openCustomer()">＋ Yeni Müşteri</button>
+</div>
+<div class="card">
+<div style="position:relative">
+<div style="display:flex;gap:8px;align-items:center">
+<input id="search" oninput="renderCustomers()" placeholder="İsim, telefon veya hayvan adı" style="padding-right:52px;flex:1">
+<button type="button" onclick="clearCustomerSearch()" aria-label="Tüm müşterileri göster" style="width:42px;height:42px;border:0;border-radius:12px;background:#eef3f2;color:#536563;font-size:22px;font-weight:700">×</button>
+<button type="button" onclick="toggleCustomerFilter()" aria-label="Müşteri filtreleri" class="btn" style="padding:10px 13px">☰ Filtre</button>
+</div>
+<div id="customerFilter" style="display:none;position:absolute;top:52px;right:0;z-index:50;width:min(92vw,700px);padding:10px;border:1px solid #dce9e6;border-radius:14px;background:#f7fbfa;box-shadow:0 12px 28px rgba(24,53,50,.12)">
+<div style="display:flex;gap:7px;flex-wrap:wrap">
+<button class="btn" onclick="setCustomerFilter('all')">Tümü</button>
+<button class="btn" onclick="setCustomerFilter('loyal')">⭐ Sadık 5+</button>
+<button class="btn" onclick="setCustomerFilter('regular')">❤️ Düzenli 3–4</button>
+<button class="btn" onclick="setCustomerFilter('new')">👤 Yeni 1–2</button>
+<button class="btn" onclick="setCustomerFilter('risk')">⚠️ Riskli</button>
+</div></div>
+</div>
+<div id="customers"></div>
+</div>
+</div>
+<div class="nav">
+  <button onclick="location.reload()"><b>⌂</b><span>Ana Sayfa</span></button>
+  <button onclick="openAppt()"><b>📅</b><span>Randevu</span></button>
+  <button onclick="focusSearch()"><b>🐾</b><span>Müşteriler</span></button>
+  <button onclick="monthlyRevenue()"><b>₺</b><span>Ciro</span></button>
+  <button onclick="openSettings()"><b>⚙️</b><span>Ayarlar</span></button>
+</div></div>
+
+<div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet"><h2 id="modalTitle"></h2><div id="modalBody" class="modal-body-scroll"></div><div class="modal-close-bar"><button class="btn" onclick="closeModal()">✕ Kapat</button></div></div></div>
+
+<script>
+const SUPABASE_URL='https://ibypczlxqhrrownltryc.supabase.co';
+const SUPABASE_KEY='sb_publishable_zh2dVONzQFc2hTpAfCKuXg_hnfSOsTo';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let db={customers:[],appointments:[],sales:[]},channel=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
+function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
+async function login(){let email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('E-posta ve şifre gerekli.');msg('Giriş yapılıyor...',true);let{data,error}=await sb.auth.signInWithPassword({email,password});if(error)return msg(error.message);showApp();await loadAll();subscribe()}
+async function signup(){let email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6)return msg('Geçerli e-posta ve en az 6 karakter şifre gir.');let{data,error}=await sb.auth.signUp({email,password});if(error)return msg(error.message);msg(data.session?'Kayıt tamamlandı.':'Kayıt tamamlandı. E-postanı doğrula, sonra giriş yap.',true)}
+async function logout(){await sb.auth.signOut()}
+async function start(){let{data:{session}}=await sb.auth.getSession();if(session){showApp();await loadAll();subscribe()}else{$('auth').style.display='flex';$('main').style.display='none'}sb.auth.onAuthStateChange(async(_e,s)=>{if(s){showApp();await loadAll();subscribe()}else{if(channel)sb.removeChannel(channel);$('auth').style.display='flex';$('main').style.display='none'}})}
+function showApp(){$('auth').style.display='none';$('main').style.display='block'}
+async function loadAll(){
+  let c=await sb.from('customers').select('*').order('created_at',{ascending:false});
+  let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});
+  if(c.error||a.error){alert((c.error||a.error).message);return}
+  db.customers=c.data||[];
+  db.appointments=a.data||[];
+  let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});
+  db.sales=s.error?[]:(s.data||[]);
+  render();
+}
+function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll()).subscribe()}
+function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
+function trSearch(v){
+  return String(v||'')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g,'i')
+    .replace(/i̇/g,'i')
+    .replace(/ş/g,'s')
+    .replace(/ğ/g,'g')
+    .replace(/ü/g,'u')
+    .replace(/ö/g,'o')
+    .replace(/ç/g,'c')
+    .trim();
+}
+
+function updateHomeSummary(){
+  let d=localDateStr(0);
+  let today=db.appointments.filter(a=>a.appointment_date===d);
+  let valid=today.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
+  let revenueAppts=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
+  let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
+  let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
+  let revenue=revenueAppts+revenueSales;
+  let dateObj=new Date(d+'T12:00:00');
+  let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  dateText=dateText.charAt(0).toUpperCase()+dateText.slice(1);
+  let el=$('homeDateMain');if(el)el.textContent=dateText;
+  el=$('heroApptText');if(el)el.textContent=today.length+' randevu';
+  el=$('heroRevenueText');if(el)el.textContent=Number(revenue).toLocaleString('tr-TR')+' ₺ ciro';
+}
+function toggleTodayHero(){
+  let el=$('todayHero');
+  if(!el)return;
+  if(window.matchMedia && window.matchMedia('(pointer:coarse)').matches)return;
+  el.classList.toggle('hero-collapsed');
+  try{localStorage.setItem('cabi_today_hero_collapsed',el.classList.contains('hero-collapsed')?'1':'0')}catch(e){}
+}
+function restoreTodayHero(){
+  let el=$('todayHero');
+  if(!el)return;
+  let isTouch=window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  if(isTouch){el.classList.remove('hero-collapsed');return}
+  try{if(localStorage.getItem('cabi_today_hero_collapsed')==='1')el.classList.add('hero-collapsed')}catch(e){}
+}
+function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary();restoreTodayHero()}
+function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div><div style="text-align:right"><span class="tag">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select><br><button class="btn whatsapp-btn" style="margin-top:6px;padding:8px 12px" onclick="event.stopPropagation();whatsappReady('${x.id}')">🐾 Hazır</button></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
+function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
+function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row" onclick="editAppt('${x.id}')" style="cursor:pointer"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(x.service||'')}</small></div></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
+function missedCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='Gelmedi').length}
+function cancelCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='İptal').length}
+function isRisky(customerId){return missedCount(customerId)>=2}
+function riskText(customerId){let n=missedCount(customerId);return n>=2?'⚠️ Riskli müşteri · '+n+' habersiz gelmeme':n+' habersiz gelmeme'}
+function loyalCount(customerId){
+  let end=new Date(); end.setHours(23,59,59,999);
+  let start=new Date(end); start.setFullYear(start.getFullYear()-1); start.setHours(0,0,0,0);
+  let startStr=start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
+  let endStr=end.getFullYear()+'-'+String(end.getMonth()+1).padStart(2,'0')+'-'+String(end.getDate()).padStart(2,'0');
+  return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='Geldi' && a.appointment_date>=startStr && a.appointment_date<=endStr).length;
+}
+function isLoyal(customerId){return loyalCount(customerId)>=5}
+
+let customerFilter='all';
+let customerListVisible=false;
+function customerTier(id){let n=loyalCount(id);return n>=5?'loyal':(n>=3?'regular':(n>=1?'new':'none'))}
+function toggleCustomerFilter(){let e=$('customerFilter');e.style.display=e.style.display==='none'?'block':'none'}
+function setCustomerFilter(v){customerFilter=v;customerListVisible=true;renderCustomers();$('customerFilter').style.display='none'}
+function customerRow(x){let n=missedCount(x.id),risk=n>=2,loyal=loyalCount(x.id),tier=customerTier(x.id);let type=String(x.pet_type||'').trim().toLowerCase();let typeLabel=type==='kedi'?'🐱 Kedi':(type==='köpek'||type==='kopek'?'🐶 Köpek':'🐾 Tür yok');let badge=tier==='loyal'?'<span class="risk-badge" style="background:#e7f7f1;color:#126b59">⭐ Sadık</span>':tier==='regular'?'<span class="risk-badge" style="background:#fff0f3;color:#b34b64">❤️ Düzenli</span>':tier==='new'?'<span class="risk-badge" style="background:#eef3f2;color:#536563">👤 Yeni</span>':'';return `<div class="row"><div onclick="detail('${x.id}')" style="cursor:pointer;flex:1"><b>${esc(x.owner_name||'')}</b>${badge}${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>${typeLabel} · ${esc(x.pet_name||'')} · ${esc(x.breed||'Irk yok')} · ${esc(x.phone||'')}</small><br><small style="color:${tier==='loyal'?'#126b59':'#71807f'}">${loyal} kez geldi · Son 12 ay</small>${n?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><button class="btn" style="padding:9px 12px" onclick="detail('${x.id}')">Aç</button></div>`}
+function renderCustomers(){let q=trSearch($('search').value);if(!q && customerFilter==='all' && !customerListVisible){$('customers').innerHTML='';return}let c=db.customers.filter(x=>!x.deleted_at && (!q || trSearch(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed+' '+x.pet_type).includes(q)));if(customerFilter!=='all')c=c.filter(x=>customerFilter==='risk'?isRisky(x.id):customerTier(x.id)===customerFilter);c=c.sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr')).slice(0,50);$('customers').innerHTML=c.length?c.map(customerRow).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
+function clearCustomerSearch(){ $('search').value=''; customerFilter='all'; customerListVisible=true; renderCustomers(); }
+
+function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="breed" placeholder="Toy Poodle"><label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
+function normalizePhone(v){let s=String(v||'').replace(/\D/g,'');if(s.startsWith('90')&&s.length===12)s='0'+s.slice(2);else if(s.length===10)s='0'+s;else s=s.replace(/^0+/,'0');return s;}
+function duplicateCustomer(owner,phone,pet){
+  let p=normalizePhone(phone),o=trSearch(owner),pn=trSearch(pet);
+  return db.customers.find(x=>!x.deleted_at&&((p&&normalizePhone(x.phone)===p)||(o&&pn&&trSearch(x.owner_name)===o&&trSearch(x.pet_name)===pn)))||null;
+}
+async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let dup=duplicateCustomer($('cname').value,$('phone').value,$('pet').value);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:$('breed').value,weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
+function statusClass(s){return 'status-'+String(s||'Bekliyor').toLowerCase().replace('ı','i').replace('ş','s').replace('ü','u').replace('ö','o').replace('ğ','g').replace('ç','c').replaceAll(' ','')}
+function statusLabel(s){return s||'Bekliyor'}
+function apptStatusOptions(selected){return ['Bekliyor','Geldi','Gelmedi','İptal'].map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
+function checkConflict(date,time,ignoreId=''){
+  if(!date||!time)return null;
+  return db.appointments.find(a=>a.id!==ignoreId&&a.appointment_date===date&&(a.appointment_time||'').slice(0,5)===(time||'').slice(0,5));
+}
+function goHome(){closeModal();window.scrollTo({top:0,behavior:'smooth'});}
+function timeOptions(selected='10:00'){
+  let out='';
+  for(let h=9;h<22;h++) for(let m of [0,30]){
+    let t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+    out+=`<option value="${t}" ${t===selected?'selected':''}>${t}</option>`;
+  }
+  return out;
+}
+function openAppt(){
+  $('modalTitle').textContent='Yeni Randevu';
+  $('modalBody').innerHTML=`<label>Müşteri / Hayvan Ara</label>
+  <input id="apptSearch" type="search" placeholder="İsim, telefon veya hayvan adı yaz..." oninput="filterApptCustomers()">
+  <input id="cid" type="hidden"><div id="apptResults" class="card" style="margin:8px 0 14px;padding:0;max-height:190px;overflow:auto"></div>
+  <div id="newApptCustomer" style="display:none" class="card">
+    <b>➕ Yeni Müşteri Bilgileri</b>
+    <label>Sahip adı</label><input id="newOwner" placeholder="Ad Soyad">
+    <label>Telefon</label><input id="newPhone" type="tel" placeholder="05xx xxx xx xx">
+    <label>Hayvan adı</label><input id="newPet" placeholder="Boncuk">
+    <label>Tür</label><select id="newType"><option>Köpek</option><option>Kedi</option></select>
+    <label>Irk</label><input id="newBreed" placeholder="Toy Poodle">
+    <label>Kilo (kg)</label><input id="newWeight" type="number" step=".1">
+    <label>Özel not</label><textarea id="newNote" placeholder="Kesim şekli, davranış, özel istek..."></textarea>
+  </div>
+  <div id="apptSelected" class="muted" style="margin-bottom:14px">Müşteri seçilmedi.</div>
+  <label>Tarih</label><input id="date" type="date" value="${localDateStr(0)}">
+  <label>Saat</label><select id="time">${timeOptions()}</select>
+  <label>İşlem</label><select id="service"><option>Tıraş – Makina</option><option>Tıraş – Makas</option><option>Hijyen & Banyo</option><option>Kıtık açma</option><option>Tırnak / bakım</option><option>Tıraş</option></select>
+  <label>Ödeme</label><div class="payment-options"><label class="payment-option"><input type="radio" name="paymentMethod" value="Nakit">💵 Nakit</label><label class="payment-option"><input type="radio" name="paymentMethod" value="Kart">💳 Kart</label></div>
+  <label>Ücret (₺)</label><input id="price" type="number" placeholder="Ücreti girin">
+  <label>Durum</label><select id="status"><option>Bekliyor</option><option>Geldi</option><option>Gelmedi</option></select>
+  <label>Not</label><textarea id="anote"></textarea><div class="actions"><button class="btn primary" onclick="addAppt()">Randevuyu Kaydet</button><button class="btn" onclick="goHome()">Ana Ekrana Dön</button></div>`;
+  $('modal').style.display='flex';filterApptCustomers();
+}
+function showNewApptCustomer(){
+  $('newApptCustomer').style.display='block';
+  $('apptSelected').textContent='Yeni müşteri kaydedilecek.';
+  $('cid').value='';
+  const q=($('apptSearch').value||'').trim();
+  if(q && !$('newOwner').value) $('newOwner').value=q;
+}
+function filterApptCustomers(){
+  let q=trSearch($('apptSearch').value);
+  let c=db.customers.filter(x=>!x.deleted_at && trSearch(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed).includes(q)).slice(0,30);
+  $('apptResults').innerHTML=(c.length?c.map(x=>{let risk=isRisky(x.id);return `<div class="row" style="cursor:pointer" onclick="selectApptCustomer('${x.id}')"><div><b>${esc(x.owner_name)}</b>${risk?'<span class="risk-badge">⚠️ Riskli</span>':''}<br><small>🐾 ${esc(x.pet_name)} · ${String(x.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'} · ${esc(x.phone||'')} · ${esc(x.breed||'Irk yok')}</small>${missedCount(x.id)?`<br><small style="color:${risk?'#a33':'#765600'}">${esc(riskText(x.id))}</small>`:''}</div><span>Seç</span></div>`}).join(''):'<div class="empty">Müşteri bulunamadı.</div>')+`<button class="btn" style="width:100%;margin-top:8px" onclick="showNewApptCustomer()">➕ Yeni Müşteri Bilgileri Gir</button>`;
+}
+function selectApptCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('cid').value=id;let n=missedCount(id);let type=String(c.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek';$('apptSelected').innerHTML=`<b>Seçilen:</b> ${esc(c.pet_name)} — ${esc(c.owner_name)} ${c.phone?`· ${esc(c.phone)}`:''}<br><b>Hayvan türü: ${type}</b>${n>=2?`<div class="warning-card">⚠️ Bu müşteri riskli olarak işaretli. ${n} kez habersiz gelmedi.</div>`:''}`;$('apptSearch').value='';$('apptResults').innerHTML=''}
+async function addAppt(){
+  let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  let cid=$('cid').value;
+  if(!cid){
+    let owner=$('newOwner')?.value.trim(),phone=$('newPhone')?.value.trim(),pet=$('newPet')?.value.trim(),type=$('newType')?.value,breed=$('newBreed')?.value.trim(),weight=$('newWeight')?.value,note=$('newNote')?.value.trim();
+    if(!owner||!pet)return alert('Yeni müşteri için sahip adı ve hayvan adı gerekli.');
+    let dup=duplicateCustomer(owner,phone,pet);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;
+    let{data:c,error:ce}=await sb.from('customers').insert({owner_id:user.id,owner_name:owner,phone,pet_name:pet,pet_type:type,breed,weight:weight?Number(weight):null,note}).select().single();
+    if(ce)return alert(ce.message);cid=c.id;
+  }
+  let conflict=checkConflict($('date').value,$('time').value);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de kaydedilsin mi?'))return;}
+  let payment=document.querySelector('input[name=paymentMethod]:checked')?.value||null;let{error}=await sb.from('appointments').insert({owner_id:user.id,customer_id:cid,appointment_date:$('date').value,appointment_time:$('time').value,service:$('service').value,price:Number($('price').value||0),payment_method:payment,note:$('anote').value,status:$('status').value});
+  if(error)return alert(error.message);closeModal();await loadAll()
+}
+function editAppt(id){let a=db.appointments.find(x=>x.id===id),opts=db.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${esc(x.owner_name)} — ${esc(x.pet_name)}${x.deleted_at?' · Silinmiş müşteri':''}</option>`).join('');let pm=a.payment_method||'';$('modalTitle').textContent='Randevuyu Düzenle';$('modalBody').innerHTML=`<label>Müşteri</label><select id="ecid">${opts}</select><label>Tarih</label><input id="edate" type="date" value="${a.appointment_date}"><label>Saat</label><select id="etime">${timeOptions((a.appointment_time||'10:00').slice(0,5))}</select><label>İşlem</label><select id="eservice"><option>Tıraş – Makina</option><option>Tıraş – Makas</option><option>Hijyen & Banyo</option><option>Kıtık açma</option><option>Tırnak / bakım</option><option>Tıraş</option></select><label>Ödeme</label><div class="payment-options"><label class="payment-option"><input type="radio" name="editPaymentMethod" value="Nakit" ${pm==='Nakit'?'checked':''}>💵 Nakit</label><label class="payment-option"><input type="radio" name="editPaymentMethod" value="Kart" ${pm==='Kart'?'checked':''}>💳 Kart</label></div><label>Ücret</label><input id="eprice" type="number" value="${a.price||0}"><label>Durum</label><select id="estatus">${apptStatusOptions(a.status)}</select><label>Not</label><textarea id="enote">${esc(a.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateAppt('${id}')">Kaydet</button><button class="btn danger" onclick="deleteAppt('${id}')">Sil</button><button class="btn" onclick="returnToCalendar('${id}')">← Takvime Dön</button></div>`;$('modal').style.display='flex';$('eservice').value=a.service}
+async function updateAppt(id){let c=db.customers.find(x=>x.id===$('ecid').value);let conflict=checkConflict($('edate').value,$('etime').value,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}let payment=document.querySelector('input[name=editPaymentMethod]:checked')?.value||null;let savedDate=$('edate').value;let{error}=await sb.from('appointments').update({customer_id:c.id,appointment_date:savedDate,appointment_time:$('etime').value,service:$('eservice').value,price:Number($('eprice').value||0),payment_method:payment,note:$('enote').value,status:$('estatus').value}).eq('id',id);if(error)return alert(error.message);closeModal();await loadAll();openCalendarView('day',savedDate)}
+function returnToCalendar(id){let a=db.appointments.find(x=>x.id===id);closeModal();openCalendarView('day',a?.appointment_date||localDateStr(0))}
+async function setApptStatus(id,status){let{error}=await sb.from('appointments').update({status}).eq('id',id);if(error)return alert(error.message);await loadAll()}
+async function moveAppt(id,date,time){let conflict=checkConflict(date,time,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}let{error}=await sb.from('appointments').update({appointment_date:date,appointment_time:time}).eq('id',id);if(error)return alert(error.message);await loadAll();openCalendarView()}
+function appointmentCard(a,compact=false){let c=db.customers.find(x=>x.id===a.customer_id)||{};let st=a.status||'Bekliyor';let price=Number(a.price||0).toLocaleString('tr-TR')+' ₺';return `<div class="appt-card" draggable="true" ondragstart="dragAppt(event,'${a.id}')" onclick="editAppt('${a.id}')"><b>${(a.appointment_time||'').slice(0,5)} · ${esc(c.owner_name||'')}</b><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(a.service||'')} · <strong>${price}</strong></small><div class="appt-actions">${!compact?`<select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${a.id}',this.value)">${apptStatusOptions(st)}</select>`:''}</div></div>`}
+let draggedApptId='';function dragAppt(e,id){draggedApptId=id;e.dataTransfer.setData('text/plain',id)}
+function openCalendar(){openCalendarView()}
+function openCalendarView(mode='day',date=localDateStr(0)){let d=date;window.calMode=mode;window.calDate=d;$('modalTitle').textContent='Randevu Takvimi';$('modalBody').innerHTML=`<div class="appt-tabs"><button class="${mode==='day'?'active':''}" onclick="openCalendarView('day','${d}')">Gün</button><button class="${mode==='week'?'active':''}" onclick="openCalendarView('week','${d}')">Hafta</button><button class="${mode==='month'?'active':''}" onclick="openCalendarView('month','${d}')">Ay</button></div><input id="calDate" type="date" value="${d}" onchange="openCalendarView(window.calMode,this.value)"><div id="calView"></div>`;$('modal').style.display='flex';renderCalendarView()}
+function renderCalendarView(){let mode=window.calMode||'day',d=window.calDate||localDateStr(0);if(mode==='day')renderDayView(d);else if(mode==='week')renderWeekView(d);else renderMonthView(d)}
+function renderDayView(d){let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));let slots='';for(let h=9;h<22;h++){for(let m of [0,30]){let t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');let aa=a.filter(x=>(x.appointment_time||'').slice(0,5)===t);slots+=`<div class="appt-slot" ondragover="event.preventDefault()" ondrop="dropAppt(event,'${d}','${t}')"><b>${t}</b>${aa.map(x=>appointmentCard(x)).join('')}</div>`}}let dt=new Date(d+'T12:00:00');$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-1)">‹</button><b>${dt.toLocaleDateString('tr-TR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</b><button class="btn" onclick="shiftCal(1)">›</button></div><div class="drag-hint">Randevuyu sürükleyip başka saate bırakabilirsiniz.</div>${slots}`}
+function renderWeekView(d){let base=new Date(d+'T12:00:00');let day=base.getDay()||7;base.setDate(base.getDate()-day+1);let heads='';for(let i=0;i<7;i++){let x=new Date(base);x.setDate(base.getDate()+i);let ds=x.toISOString().slice(0,10);heads+=`<div class="appt-day"><div class="appt-day-head">${x.toLocaleDateString('tr-TR',{weekday:'short'})}<br>${x.getDate()}.${x.getMonth()+1}</div>${Array.from({length:26},(_,j)=>{let h=9+Math.floor(j/2),m=j%2?30:0,t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');let aa=db.appointments.filter(a=>a.appointment_date===ds&&(a.appointment_time||'').slice(0,5)===t);return `<div class="appt-slot" ondragover="event.preventDefault()" ondrop="dropAppt(event,'${ds}','${t}')"><small>${t}</small>${aa.map(a=>appointmentCard(a,true)).join('')}</div>`}).join('')}</div>`}$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-7)">‹</button><b>Haftalık görünüm</b><button class="btn" onclick="shiftCal(7)">›</button></div><div class="drag-hint">Randevuyu sürükleyerek başka gün ve saate taşıyabilirsiniz.</div><div class="appt-week">${heads}</div>`}
+function renderMonthView(d){let dt=new Date(d+'T12:00:00'),y=dt.getFullYear(),m=dt.getMonth(),first=new Date(y,m,1),start=(first.getDay()||7)-1,last=new Date(y,m+1,0).getDate(),cells='';for(let i=0;i<start;i++)cells+='<div></div>';for(let n=1;n<=last;n++){let ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(n).padStart(2,'0'),aa=db.appointments.filter(a=>a.appointment_date===ds);cells+=`<div class="month-cell ${ds===localDateStr(0)?'today':''}" onclick="openCalendarView('day','${ds}')"><b>${n}</b><div class="mini">${aa.length?aa.length+' randevu':'—'}</div>${aa.slice(0,2).map(a=>`<div class="mini">${(a.appointment_time||'').slice(0,5)} · ${esc((db.customers.find(c=>c.id===a.customer_id)||{}).owner_name||'')} · ${Number(a.price||0).toLocaleString('tr-TR')} ₺${(db.customers.find(c=>c.id===a.customer_id)||{}).deleted_at?' · Silinmiş müşteri':''}</div>`).join('')}</div>`}$('calView').innerHTML=`<div class="month-title"><button class="btn" onclick="shiftCal(-30)">‹</button><b>${dt.toLocaleDateString('tr-TR',{month:'long',year:'numeric'})}</b><button class="btn" onclick="shiftCal(30)">›</button></div><div class="month-wrap"><div class="appt-month"><div><b>Pzt</b></div><div><b>Sal</b></div><div><b>Çar</b></div><div><b>Per</b></div><div><b>Cum</b></div><div><b>Cmt</b></div><div><b>Paz</b></div>${cells}</div></div>`}
+function shiftCal(days){let d=new Date((window.calDate||localDateStr(0))+'T12:00:00');d.setDate(d.getDate()+days);openCalendarView(window.calMode,d.toISOString().slice(0,10))}
+function dropAppt(e,date,time){e.preventDefault();let id=e.dataTransfer.getData('text/plain')||draggedApptId;if(id)moveAppt(id,date,time)}
+function detail(id){let c=db.customers.find(x=>x.id===id),h=db.appointments.filter(a=>a.customer_id===c.id).sort((a,b)=>(b.appointment_date+(b.appointment_time||'')).localeCompare(a.appointment_date+(a.appointment_time||'')));let missed=missedCount(id),cancelled=cancelCount(id),risk=missed>=2,loyal=loyalCount(id),isL=loyal>=5;$('modalTitle').textContent=c.pet_name;$('modalBody').innerHTML=`<div class="card"><b>${esc(c.owner_name)}</b>${isL?'<span class="risk-badge" style="background:#e7f7f1;color:#126b59">🏆 Sadık Müşteri</span>':''}${risk?'<span class="risk-badge">⚠️ Riskli müşteri</span>':''}<br><small style="color:#126b59">🏆 Son 12 ayda ${loyal} kez geldi${isL?' · Sadık müşteri':''}</small><br>📞 ${esc(c.phone||'')}<br>🐾 ${esc(c.pet_type||'')} · ${esc(c.breed||'')} · ${esc(c.weight||'')} kg<br><br>📝 ${esc(c.note||'Not yok')}</div>${missed||cancelled?`<div class="warning-card"><b>Randevu geçmişi</b><br>Habersiz gelmeme: <b>${missed}</b>${cancelled?`<br>İptal: <b>${cancelled}</b>`:''}${risk?'<br><br>⚠️ Bu müşteri riskli olarak işaretlendi.':''}</div>`:''}<div class="actions"><button class="btn primary" onclick="editCustomer('${c.id}')">✏️ Bilgileri Güncelle</button><button class="btn" onclick="whatsapp('${c.id}')">WhatsApp</button><button class="btn danger" onclick="confirmDeleteCustomer('${c.id}')">🗑️ Müşteriyi Sil</button></div><h3>İşlem geçmişi</h3>${h.length?h.map(a=>`<div class="row"><span>${a.appointment_date} · ${esc(a.service)}<br><small>${esc(a.status||'Bekliyor')}${a.payment_method?` · ${a.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></span><b>${Number(a.price||0).toLocaleString('tr-TR')} ₺</b></div>`).join(''):'<div class="empty">Henüz işlem yok.</div>'}`;$('modal').style.display='flex'}
+function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('modalTitle').textContent='Müşteri Bilgilerini Güncelle';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="ucname" value="${esc(c.owner_name)}"><label>Telefon</label><input id="uphone" type="tel" value="${esc(c.phone||'')}"><label>Hayvan adı</label><input id="upet" value="${esc(c.pet_name)}"><label>Tür</label><select id="utype"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="ubreed" value="${esc(c.breed||'')}"><label>Kilo (kg)</label><input id="uweight" type="number" step=".1" value="${c.weight??''}"><label>Özel not</label><textarea id="unote">${esc(c.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateCustomer('${c.id}')">Kaydet</button><button class="btn" onclick="detail('${c.id}')">Vazgeç</button></div>`;$('modal').style.display='flex';$('utype').value=c.pet_type||'Köpek'}
+async function confirmDeleteCustomer(id){
+  let c=db.customers.find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm('Bu müşteriyi silmek istediğinize emin misiniz?\n\n'+c.pet_name+' — '+c.owner_name))return;
+
+  // Müşteri listeden kaldırılır ama müşteri kaydı ve randevu bağlantısı korunur.
+  // Böylece geçmiş randevular ana ekranda görünmeye devam eder ve ciro kesinlikle değişmez.
+  let{error}=await sb.from('customers').update({deleted_at:new Date().toISOString()}).eq('id',id);
+  if(error)return alert('Müşteri silinemedi: '+error.message+'\n\nSupabase customers tablosuna deleted_at sütununu ekleyin.');
+  closeModal();
+  await loadAll();
+}
+async function deleteAppt(id){
+  let a=db.appointments.find(x=>x.id===id);
+  if(!a)return;
+  if(!confirm('Bu randevuyu silmek istediğinize emin misiniz?\n\n'+(a.appointment_date||'')+' · '+(a.appointment_time||'').slice(0,5)))return;
+  let{error}=await sb.from('appointments').delete().eq('id',id);
+  if(error)return alert('Randevu silinemedi: '+error.message);
+  closeModal();
+  await loadAll();
+}
+async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
+function whatsappAppointment(apptId){
+  let upcoming=db.appointments.find(a=>a.id===apptId);
+  if(!upcoming)return alert('Randevu bulunamadı.');
+  let c=db.customers.find(x=>x.id===upcoming.customer_id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let ph=(c.phone||'').replace(/\D/g,'');
+  if(ph.startsWith('0'))ph='90'+ph.slice(1);
+  if(!ph)return alert('Telefon numarası kayıtlı değil.');
+  let date=new Date(upcoming.appointment_date+'T12:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let time=upcoming.appointment_time?(upcoming.appointment_time+'').slice(0,5):'';
+  let nl=String.fromCharCode(10);
+  let isIPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  let text;
+  if(isIPhone){
+    const paw='\uD83D\uDC3E',calendar='\uD83D\uDCC5',clock='\u23F0';
+    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere. '+paw;
+  }else{
+    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması'+nl+nl+'Evcil Hayvan: '+c.pet_name+nl+'Randevu Tarihi: '+date+nl+(time?'Randevu Saati: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
+  }
+  window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
+}
+function whatsappReady(apptId){
+  let upcoming=db.appointments.find(a=>a.id===apptId);
+  if(!upcoming)return alert('Randevu bulunamadı.');
+  let c=db.customers.find(x=>x.id===upcoming.customer_id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let ph=(c.phone||'').replace(/\D/g,'');
+  if(ph.startsWith('0'))ph='90'+ph.slice(1);
+  if(!ph)return alert('Telefon numarası kayıtlı değil.');
+  let nl=String.fromCharCode(10);
+  let isIPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  let text;
+  if(isIPhone){
+    const paw='\uD83D\uDC3E';
+    text='Merhaba '+c.owner_name+', '+c.pet_name+'\'un işlemi tamamlandı, artık sizi bekliyor. '+paw+nl+'Görüşmek üzere!';
+  }else{
+    text='Merhaba '+c.owner_name+', '+c.pet_name+'\'un işlemi tamamlandı, artık sizi bekliyor.'+nl+'Görüşmek üzere!'+nl+nl+'Cabi Pet Kuaför';
+  }
+  window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
+}
+function whatsapp(id){
+  let c=db.customers.find(x=>x.id===id);
+  if(!c)return alert('Müşteri bulunamadı.');
+  let now=new Date();
+  let upcoming=db.appointments.filter(a=>a.customer_id===id&&a.appointment_date).map(a=>({...a,_dt:new Date(a.appointment_date+'T'+(a.appointment_time||'23:59'))})).filter(a=>a._dt>=now).sort((a,b)=>a._dt-b._dt)[0];
+  if(!upcoming)return alert('Bu müşteri için kayıtlı gelecek randevu bulunamadı.');
+  whatsappAppointment(upcoming.id);
+}
+
+function freeDateLabel(date){
+  let d=new Date(date+'T12:00:00');
+  return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric',weekday:'long'});
+}
+function openFreeSlots(date=localDateStr(0)){
+  $('modalTitle').textContent='Boş Saatler';
+  $('modalBody').innerHTML=`<label>Tarih</label><input id="freeDate" type="date" value="${date}" onchange="renderFreeSlots(this.value)"><div id="freeDateLabel" class="card" style="margin-top:8px;text-align:center;font-size:18px;font-weight:700">📅 ${freeDateLabel(date)}</div><div id="freeSlots"></div>`;
+  $('modal').style.display='flex';
+  renderFreeSlots(date);
+}
+function renderFreeSlots(date){
+  let label=$('freeDateLabel');if(label)label.innerHTML='📅 '+freeDateLabel(date);
+  let a=db.appointments.filter(x=>x.appointment_date===date),occupied={};
+  a.forEach(x=>{let status=x.status||'Bekliyor';if(['İptal','Gelmedi'].includes(status))return;let t=(x.appointment_time||'').slice(0,5);if(t)occupied[t]=x;});
+  let rows='';
+  for(let h=9;h<22;h++) for(let m of [0,30]){
+    let t=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'),x=occupied[t],c=x?db.customers.find(c=>c.id===x.customer_id):null;
+    if(x) {
+      let svc=x.service||'Tıraş';
+      let svcIcon=svc.includes('Hijyen')?'🛁':(svc.includes('Makas')?'✂️':'✂️');
+      rows+=`<div class="row" style="background:#fff0f0;border-radius:12px;padding:12px;margin:6px 0"><div><b>🔴 ${t} · Dolu</b><br><small>${petTypeLabel(c)} · ${esc(c?.pet_name||'')} · ${esc(c?.owner_name||'')}${c?.deleted_at?' · Silinmiş müşteri':''}</small><br><small>${svcIcon} <b>${esc(svc)}</b></small></div><button class="btn" style="padding:8px 12px" onclick="editAppt('${x.id}')">Düzenle</button></div>`;
+    }
+    else rows+=`<div class="row" style="background:#eaf8f3;border-radius:12px;padding:12px;margin:6px 0"><div><b>🟢 ${t} · Boş</b></div><button class="btn primary" style="padding:8px 12px" onclick="newApptAt('${date}','${t}')">+ Randevu</button></div>`;
+  }
+  $('freeSlots').innerHTML=`<div class="card" style="margin-top:10px"><b>09:00 – 22:00 çalışma saatleri</b><div class="muted" style="margin-top:4px">30 dakikalık aralıklarla randevu oluşturabilirsin.</div></div>${rows}`;
+}
+function newApptAt(date,time){openAppt();setTimeout(()=>{if($('date'))$('date').value=date;if($('time'))$('time').value=time},0)}
+
+
+async function openSales(){
+  $('modalTitle').textContent='🛍️ Satış Ekle';
+  $('modalBody').innerHTML=`
+    <div class="field"><label>Satış türü</label>
+      <select id="saleType">
+        <option value="Aksesuar">Aksesuar</option>
+        <option value="Kıyafet">Kıyafet</option>
+        <option value="Bakım ürünü">Bakım ürünü</option>
+        <option value="Sağlık">Sağlık</option>
+        <option value="Diğer">Diğer</option>
+      </select>
+    </div>
+    <div class="field"><label>Ödeme</label>
+      <div class="payment-options">
+        <label class="payment-option"><input type="radio" name="salePaymentMethod" value="Nakit">💵 Nakit</label>
+        <label class="payment-option"><input type="radio" name="salePaymentMethod" value="Kart">💳 Kart</label>
+      </div>
+    </div>
+    <div class="field"><label>Tutar (₺)</label>
+      <input id="salePrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+    </div>
+    <div class="field"><label>Not</label>
+      <textarea id="saleNote" placeholder="İsteğe bağlı"></textarea>
+    </div>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveSale()">Satışı Kaydet</button>
+  `;
+  $('modal').style.display='flex';
+}
+
+async function saveSale(){
+  let sale={
+    sale_type:$('saleType').value,
+    product_name:$('saleType').value,
+    price:Number($('salePrice').value||0),
+    payment_method:document.querySelector('input[name=salePaymentMethod]:checked')?.value||null,
+    note:$('saleNote').value.trim()
+  };
+  if(!(sale.price>0))return alert('Geçerli bir tutar girin.');
+
+  let {error}=await sb.from('sales').insert(sale);
+  if(error)return alert('Satış kaydedilemedi: '+error.message);
+  closeModal();
+  await loadAll();
+}
+
+async function deleteSale(id){
+  let s=(db.sales||[]).find(x=>x.id===id);
+  if(!s)return;
+  let label=(s.product_name||'Satış')+' · '+Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₺';
+  if(!confirm('Bu satışı silmek istediğinize emin misiniz?\n\n'+label))return;
+
+  let {error}=await sb.from('sales').delete().eq('id',id);
+  if(error)return alert('Satış silinemedi: '+error.message);
+
+  // Silme sonrası tüm tabloları yeniden çekmiyoruz; böylece başka bir tablonun
+  // izin hatası satış silme işlemini bozmaz.
+  db.sales=(db.sales||[]).filter(x=>x.id!==id);
+  render();
+  openSalesHistory();
+}
+
+async function openSalesHistory(){
+  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  let recent=sales.slice(0,4);
+
+  $('modalTitle').textContent='🛍️ Satışlar';
+  $('modalBody').innerHTML=recent.length?
+    `<div class="sales-preview-list">${recent.map(s=>`
+      <div class="row">
+        <div><b>${esc(s.product_name||'')}</b><br>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+        </div>
+      </div>
+    `).join('')}</div>`:
+    '<div class="card">Henüz ürün satışı yok.</div>';
+
+  if(sales.length>4){
+    $('modalBody').innerHTML += `<button class="btn" style="width:100%;margin-top:12px" onclick="openAllSales()">📋 Tüm Satışları Gör</button>`;
+  }
+  $('modal').style.display='flex';
+}
+
+function openAllSales(){
+  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  $('modalTitle').textContent='🛍️ Tüm Satışlar';
+  $('modalBody').innerHTML=sales.length?
+    `<div class="sales-history-list">${sales.map(s=>`
+      <div class="row">
+        <div><b>${esc(s.product_name||s.sale_type||'')}</b><br>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+          <button class="btn" style="padding:8px 10px" onclick="editSale('${s.id}')">✏️ Düzenle</button>
+          <button class="btn danger" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+        </div>
+      </div>
+    `).join('')}</div>`:
+    '<div class="card">Henüz ürün satışı yok.</div>';
+  $('modal').style.display='flex';
+}
+
+function editSale(id){
+  let s=(db.sales||[]).find(x=>x.id===id);
+  if(!s)return;
+  $('modalTitle').textContent='🛍️ Satışı Düzenle';
+  $('modalBody').innerHTML=`
+    <div class="field"><label>Satış türü</label>
+      <select id="editSaleType">
+        <option value="Aksesuar" ${s.sale_type==='Aksesuar'?'selected':''}>Aksesuar</option>
+        <option value="Kıyafet" ${s.sale_type==='Kıyafet'?'selected':''}>Kıyafet</option>
+        <option value="Bakım ürünü" ${s.sale_type==='Bakım ürünü'?'selected':''}>Bakım ürünü</option>
+        <option value="Sağlık" ${s.sale_type==='Sağlık'?'selected':''}>Sağlık</option>
+        <option value="Diğer" ${(!s.sale_type||s.sale_type==='Diğer')?'selected':''}>Diğer</option>
+      </select>
+    </div>
+    <div class="field"><label>Ödeme</label>
+      <div class="payment-options">
+        <label class="payment-option"><input type="radio" name="editSalePaymentMethod" value="Nakit" ${s.payment_method==='Nakit'?'checked':''}>💵 Nakit</label>
+        <label class="payment-option"><input type="radio" name="editSalePaymentMethod" value="Kart" ${s.payment_method==='Kart'?'checked':''}>💳 Kart</label>
+      </div>
+    </div>
+    <div class="field"><label>Tutar (₺)</label>
+      <input id="editSalePrice" type="number" inputmode="decimal" min="0" step="0.01" value="${s.price||0}">
+    </div>
+    <div class="field"><label>Tarih</label>
+      <input id="editSaleDate" type="date" value="${s.sale_date||localDateStr(0)}">
+    </div>
+    <div class="field"><label>Not</label>
+      <textarea id="editSaleNote">${esc(s.note||'')}</textarea>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="updateSale('${s.id}')">Kaydet</button>
+      <button class="btn" onclick="openAllSales()">← Satışlara Dön</button>
+    </div>`;
+  $('modal').style.display='flex';
+}
+
+async function updateSale(id){
+  let type=$('editSaleType').value;
+  let price=Number($('editSalePrice').value||0);
+  if(!(price>0))return alert('Geçerli bir tutar girin.');
+  let payment=document.querySelector('input[name=editSalePaymentMethod]:checked')?.value||null;
+  let saleDate=$('editSaleDate').value||localDateStr(0);
+  let note=$('editSaleNote').value.trim();
+
+  let {data:updated,error}=await sb.from('sales').update({
+    sale_type:type,
+    product_name:type,
+    price,
+    payment_method:payment,
+    sale_date:saleDate,
+    note
+  }).eq('id',id).select('*').maybeSingle();
+  if(error)return alert('Satış güncellenemedi: '+error.message);
+  if(!updated)return alert('Satış güncellenemedi. Supabase satış güncelleme izni (UPDATE) kapalı görünüyor. V57 SQL kodunu çalıştırın.');
+
+  let i=(db.sales||[]).findIndex(x=>x.id===id);
+  if(i>=0)db.sales[i]={...db.sales[i],...updated};
+  render();
+  openAllSales();
+}
+
+function petHistory(customerId){
+  return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='Geldi' && a.appointment_date).sort((a,b)=>a.appointment_date.localeCompare(b.appointment_date));
+}
+function monthsBetween(from,to){return (to.getTime()-from.getTime())/(1000*60*60*24*30.4375)}
+function lostInfo(customerId){
+  let c=db.customers.find(x=>x.id===customerId); if(!c)return null;
+  let h=petHistory(customerId); if(!h.length)return null;
+  let last=new Date(h[h.length-1].appointment_date+'T12:00:00');
+  let now=new Date(); now.setHours(12,0,0,0);
+  let months=Math.max(0,monthsBetween(last,now));
+  let type=String(c.pet_type||'').trim().toLowerCase();
+  let cat=type==='kedi';
+  let threshold;
+  if(h.length===1){threshold=12;}
+  else{
+    let intervals=[];
+    for(let i=1;i<h.length;i++) intervals.push(monthsBetween(new Date(h[i-1].appointment_date+'T12:00:00'),new Date(h[i].appointment_date+'T12:00:00')));
+    let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;
+    threshold=Math.max(avg*2,12);
+  }
+  return {c,h,last,months,threshold};
+}
+function getLostCustomers(){
+  return db.customers.filter(c=>!c.deleted_at).map(c=>lostInfo(c.id)).filter(x=>x&&x.months>=x.threshold).sort((a,b)=>b.months-a.months);
+}
+function openLostCustomers(){
+  let lost=getLostCustomers();
+  $('modalTitle').textContent='🔴 Kayıp Müşteriler';
+  let intro='<div class="card"><b>Nasıl hesaplanıyor?</b><div class="muted" style="margin-top:6px;font-size:13px">Müşterinin sadece “Geldi” kayıtları dikkate alınır. Birden fazla geliş varsa kendi ortalama geliş aralığının 2 katı esas alınır; ancak süre 12 aydan kısa olamaz. Tek gelişte ise 12 ay sınırı uygulanır.</div></div>';
+  let html=lost.length?lost.map(x=>{
+    let c=x.c,type=String(c.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek';
+    let lastText=x.last.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    return `<div class="row"><div style="flex:1"><b>${esc(c.owner_name||'')}</b><br><small>${type} · ${esc(c.pet_name||'')} · Son geliş: ${lastText}</small><br><small style="color:#a33">🔴 ${Math.floor(x.months)} aydır gelmedi</small></div></div>`;
+  }).join(''):'<div class="card"><b>🎉 Kayıp müşteri yok.</b><div class="muted" style="margin-top:5px">Şu anda geri dönmesi beklenen bir müşteri görünmüyor.</div></div>';
+  $('modalBody').innerHTML=intro+html;
+  $('modal').style.display='flex';
+}
+function whatsappLost(id){
+  let c=db.customers.find(x=>x.id===id); if(!c)return;
+  let ph=(c.phone||'').replace(/\D/g,''); if(ph.startsWith('0'))ph='90'+ph.slice(1); if(!ph)return alert('Telefon numarası kayıtlı değil.');
+  let isIPhone=/iPhone|iPad|iPod/i.test(navigator.userAgent),nl=String.fromCharCode(10);
+  let text=isIPhone?'Merhaba '+c.owner_name+', '+c.pet_name+' için sizi uzun zamandır göremedik. 🐾'+nl+nl+'Bakım zamanı geldiyse sizi Cabi Pet Kuaför’e bekleriz.'+nl+nl+'Görüşmek üzere!':'Merhaba '+c.owner_name+', '+c.pet_name+' için sizi uzun zamandır göremedik.'+nl+nl+'Bakım zamanı geldiyse sizi Cabi Pet Kuaför’e bekleriz.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
+  window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
+}
+
+function openPortfolio(){
+  let active=db.customers.filter(c=>!c.deleted_at);
+  let cats=active.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
+  let dogs=active.filter(c=>{
+    let t=String(c.pet_type||'').trim().toLowerCase();
+    return t==='köpek'||t==='kopek';
+  }).length;
+  let other=Math.max(active.length-cats-dogs,0);
+  let catPct=active.length?cats/active.length*100:0;
+  let dogPct=active.length?dogs/active.length*100:0;
+
+  $('modalTitle').textContent='🐾 Müşteri Portföyü';
+  $('modalBody').innerHTML=
+    '<div class="card" style="text-align:center">'+
+      '<div class="muted">Aktif müşteri portföyü</div>'+
+      '<div style="font-size:38px;font-weight:800;margin-top:4px">'+active.length+'</div>'+
+      '<div class="muted">toplam müşteri</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
+      '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐶</div><b style="font-size:24px">'+dogs+'</b><div>Köpek</div><small class="muted">'+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
+      '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐱</div><b style="font-size:24px">'+cats+'</b><div>Kedi</div><small class="muted">'+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
+    '</div>'+
+    (other?'<div class="card" style="text-align:center"><b>Diğer / türü belirtilmemiş</b><div style="font-size:22px;margin-top:4px">'+other+'</div></div>':'')+
+    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez.</div>'+
+    '<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
+  $('modal').style.display='flex';
+}
+
+function openRevenue(){monthlyRevenue(0)}
+function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
+async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),payment_method:x.payment_method||null,note:x.note||null,status:x.status||'Bekliyor'})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;await loadAll();alert("Yedek başarıyla Supabase'e yüklendi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
+function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
+function closeModal(){$('modal').style.display='none'}
+start();
+
+function monthlyRevenue(offset=0){
+  let base=new Date();
+  let year=base.getFullYear()+offset;
+  let nowYear=base.getFullYear(), nowMonth=base.getMonth();
+  let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  let rows=[], annualTotal=0, annualCount=0, annualApptCount=0, annualSaleCount=0, annualCashTotal=0, annualCardTotal=0;
+  for(let m=0;m<12;m++){
+    let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
+    let appts=db.appointments.filter(a=>a.appointment_date && a.appointment_date.startsWith(prefix));
+    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
+    let sales=(db.sales||[]).filter(s=>s.sale_date && s.sale_date.startsWith(prefix));
+    let serviceTotal=revenueAppts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
+    let salesTotal=sales.reduce((sum,x)=>sum+(Number(x.price)||0),0);
+    let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((sum,a)=>sum+(Number(a.price)||0),0)
+      +sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((sum,s)=>sum+(Number(s.price)||0),0);
+    let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((sum,a)=>sum+(Number(a.price)||0),0)
+      +sales.filter(s=>(s.payment_method||'')==='Kart').reduce((sum,s)=>sum+(Number(s.price)||0),0);
+    let total=serviceTotal+salesTotal;
+    let days=new Set(appts.map(a=>a.appointment_date)).size;
+    let cats=revenueAppts.filter(a=>{
+      let c=db.customers.find(x=>x.id===a.customer_id);
+      return String(c?.pet_type||'').toLowerCase()==='kedi';
+    }).length;
+    let dogs=revenueAppts.filter(a=>{
+      let c=db.customers.find(x=>x.id===a.customer_id);
+      return String(c?.pet_type||'').toLowerCase()==='köpek' || String(c?.pet_type||'').toLowerCase()==='kopek';
+    }).length;
+    rows.push({month:months[m],total,serviceTotal,salesTotal,count:revenueAppts.length+sales.length,days,cats,dogs,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length,salesCount:sales.length});
+    annualTotal+=total; annualCount+=revenueAppts.length+sales.length; annualApptCount+=revenueAppts.length; annualSaleCount+=sales.length; annualCashTotal+=cashTotal; annualCardTotal+=cardTotal;
+  }
+  let best=rows.reduce((a,b)=>b.total>a.total?b:a,rows[0]);
+  let annualCats=rows.reduce((sum,r)=>sum+r.cats,0);
+  let annualDogs=rows.reduce((sum,r)=>sum+r.dogs,0);
+  let annualAvg=annualApptCount?annualTotal/annualApptCount:0;
+  let annualServiceTotal=rows.reduce((sum,r)=>sum+r.serviceTotal,0);
+  let annualSalesTotal=rows.reduce((sum,r)=>sum+r.salesTotal,0);
+  let servicePct=annualTotal?annualServiceTotal/annualTotal*100:0;
+  let salesPct=annualTotal?annualSalesTotal/annualTotal*100:0;
+  let services={};
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-')) return;
+    if((a.status||'Bekliyor')!=='Geldi') return;
+    let n=(a.service||'Diğer').trim()||'Diğer';
+    services[n]=(services[n]||0)+(Number(a.price)||0);
+  });
+  let serviceRows=Object.entries(services).sort((a,b)=>b[1]-a[1]);
+  let maxMonth=Math.max(...rows.map(r=>r.total),1);
+
+  let html=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<div><h2 style="margin:0">💰 '+year+' Ciro</h2><div class="muted">Gelmedi veya İptal randevular ciroya dahil edilmez.</div></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:center;align-items:center;gap:10px;margin:14px 0">'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset-1)+')">‹ '+(year-1)+'</button>'+
+      '<b style="font-size:18px">'+year+'</b>'+
+      '<button class="btn" onclick="monthlyRevenue('+(offset+1)+')">'+(year+1)+' ›</button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+
+      '<div class="card"><small>Yıllık toplam</small><h2>'+annualTotal.toLocaleString('tr-TR')+' ₺</h2></div>'+
+      '<div class="card"><small>✂️ Hizmet Cirosu</small><h3>'+annualServiceTotal.toLocaleString('tr-TR')+' ₺ <span class="muted" style="font-size:12px">('+servicePct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</span></h3></div>'+
+      '<div class="card"><small>🛍️ Satış Cirosu</small><h3>'+annualSalesTotal.toLocaleString('tr-TR')+' ₺ <span class="muted" style="font-size:12px">('+salesPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</span></h3></div>'+
+      '<div class="card"><small>Randevu</small><h2>'+annualApptCount+'</h2></div>'+
+      '<div class="card"><small>Satış</small><h2>'+annualSaleCount+'</h2></div>'+
+      '<div class="card"><small>💵 Nakit alınan</small><h3>'+annualCashTotal.toLocaleString('tr-TR')+' ₺</h3></div>'+
+      '<div class="card"><small>💳 Kart alınan</small><h3>'+annualCardTotal.toLocaleString('tr-TR')+' ₺</h3></div>'+
+      '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
+      '<div class="card" style="grid-column:1/-1"><small>Yıllık hayvan sayısı</small><h3 style="margin-bottom:0">🐱 '+annualCats+' kedi · 🐶 '+annualDogs+' köpek</h3></div>'+
+    '</div>'+
+    '<h3 style="margin:18px 0 10px">📊 Ay Ay Detay</h3>';
+
+  rows.forEach((r,i)=>{
+    let current=year===nowYear && i===nowMonth;
+    let pct=annualTotal?r.total/annualTotal*100:0;
+    let bar=r.total/maxMonth*100;
+    html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b>'+
+        '<div class="muted">✂️ Hizmet '+r.serviceTotal.toLocaleString('tr-TR')+' ₺ · 🛍️ Satış '+r.salesTotal.toLocaleString('tr-TR')+' ₺ · '+(r.count-r.salesCount)+' randevu · '+r.salesCount+' satış · '+r.days+' aktif gün · 🐱 '+r.cats+' kedi · 🐶 '+r.dogs+' köpek · Ort. randevu '+r.avg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</div></div>'+
+        '<b style="font-size:18px;white-space:nowrap">'+r.total.toLocaleString('tr-TR')+' ₺</b>'+
+      '</div>'+
+      '<div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div>'+
+      '<div class="muted" style="font-size:11px;margin-top:4px">'+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'% yıllık ciro</div>'+
+    '</div>';
+  });
+
+  if(serviceRows.length){
+    html+='<h3 style="margin:18px 0 10px">✂️ Hizmet Bazında Ciro</h3>';
+    serviceRows.forEach(([name,total])=>{
+      let pct=annualTotal?total/annualTotal*100:0;
+      html+='<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #eee">'+
+        '<span>'+name+' <small class="muted">('+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span>'+
+        '<b>'+total.toLocaleString('tr-TR')+' ₺</b></div>';
+    });
+  }
+
+
+  let saleRows={};
+  (db.sales||[]).forEach(s=>{
+    if(!s.sale_date || !s.sale_date.startsWith(year+'-')) return;
+    let n=(s.sale_type||'Diğer').trim()||'Diğer';
+    saleRows[n]=(saleRows[n]||0)+(Number(s.price)||0);
+  });
+  let saleEntries=Object.entries(saleRows).sort((a,b)=>b[1]-a[1]);
+  // Yoğunluk analizi: seçili yılda gerçekleşen (Geldi) randevuların haftanın günlerine dağılımı
+  let weekdayNames=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+  let weekdayShort=['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+  let weekdayCounts=[0,0,0,0,0,0,0];
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-') || (a.status||'Bekliyor')!=='Geldi') return;
+    let d=new Date(a.appointment_date+'T12:00:00');
+    let idx=(d.getDay()+6)%7;
+    weekdayCounts[idx]++;
+  });
+  let maxWeekday=Math.max(...weekdayCounts,1);
+  let busiestIdx=weekdayCounts.indexOf(Math.max(...weekdayCounts));
+  html+='<h3 style="margin:18px 0 10px">📊 En Yoğun Günler</h3>';
+  html+='<div class="card" style="padding:14px">'+
+    '<div class="muted" style="margin-bottom:12px">'+year+' yılında durumu <b>Geldi</b> olan randevulara göre.</div>'+
+    weekdayCounts.map((count,i)=>{
+      let w=count/maxWeekday*100;
+      return '<div style="display:grid;grid-template-columns:56px 1fr 32px;align-items:center;gap:8px;margin:9px 0">'+
+        '<b style="font-size:12px">'+weekdayShort[i]+'</b>'+
+        '<div style="height:12px;background:#edf1f1;border-radius:10px;overflow:hidden"><div style="height:100%;width:'+w+'%;background:#15947f;border-radius:10px"></div></div>'+
+        '<b style="text-align:right;font-size:13px">'+count+'</b>'+
+      '</div>';
+    }).join('')+
+    '<div class="muted" style="margin-top:10px;font-size:12px">🏆 En yoğun gün: <b>'+weekdayNames[busiestIdx]+'</b> · '+weekdayCounts[busiestIdx]+' randevu</div>'+
+  '</div>';
+
+  html+='<div style="display:flex;gap:8px;margin-top:18px"><button class="btn" style="flex:1" onclick="openSales()">🛍️ Satış Ekle</button><button class="btn" style="flex:1" onclick="openSalesHistory()">📋 Satış Geçmişi</button></div>';
+  if(saleEntries.length){
+    html+='<h3 style="margin:18px 0 10px">🛍️ Ürün Satışları</h3>';
+    saleEntries.forEach(([name,total])=>{
+      let pct=annualTotal?total/annualTotal*100:0;
+      html+='<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #eee"><span>'+esc(name)+' <small class="muted">('+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+total.toLocaleString('tr-TR')+' ₺</b></div>';
+    });
+  }
+  html+='<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
+  $('modalTitle').textContent='💰 Ciro';
+  $('modalBody').innerHTML=html;
+  $('modal').style.display='flex';
+}
+</script>
+</body></html>
