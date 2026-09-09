@@ -126,6 +126,9 @@ body{background:#f5f8f7}
   .nav{max-width:1180px;border-radius:18px 18px 0 0;padding:9px 24px calc(9px + env(safe-area-inset-bottom))}
 }
 
+
+.sales-history-list{height:min(48vh,420px);overflow-y:auto;overflow-x:hidden;padding:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+@media(max-width:600px){.sales-history-list{height:48vh;max-height:420px;min-height:180px}}
 </style>
 
 <style>
@@ -649,7 +652,7 @@ async function openSalesHistory(){
   let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
 
   $('modalTitle').textContent='🛍️ Satışlar';
-  $('modalBody').innerHTML=sales.length?`<div style="max-height:55vh;overflow-y:auto;padding-right:4px;-webkit-overflow-scrolling:touch">${sales.map(s=>`
+  $('modalBody').innerHTML=sales.length?`<div class="sales-history-list">${sales.map(s=>`
     <div class="row">
       <div><b>${esc(s.product_name||'')}</b><br>
       <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
