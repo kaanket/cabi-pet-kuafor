@@ -135,6 +135,19 @@ body{background:#f5f8f7}
 .payment-option{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 10px;border:1px solid #dce5e3;border-radius:13px;background:#fff;color:#173535;font-size:15px;font-weight:750;cursor:pointer}
 .payment-option:has(input:checked){background:#e5f5f1;border-color:#15947f;color:#126b5f;box-shadow:inset 0 0 0 1px #15947f}
 .payment-option input{width:18px;height:18px;margin:0;accent-color:#15947f}
+
+/* V53: Takvim mobil yatay kaymayı engelle */
+#calView{width:100%;min-width:0;max-width:100%;overflow-x:hidden}
+.appt-slot{min-width:0;max-width:100%;overflow:hidden}
+.appt-card{min-width:0;max-width:100%;overflow:hidden;word-break:break-word}
+.month-title{width:100%;min-width:0}
+@media (max-width:600px){
+  .sheet{width:100vw;max-width:100vw;overflow:hidden}
+  .modal-body-scroll{width:100%;min-width:0;overflow-x:hidden}
+  #calView{overflow-x:hidden}
+  .appt-week{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  .appt-day{min-width:120px}
+}
 </style>
 
 <style>
