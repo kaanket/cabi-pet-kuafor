@@ -792,12 +792,12 @@ function lostInfo(customerId){
   let type=String(c.pet_type||'').trim().toLowerCase();
   let cat=type==='kedi';
   let threshold;
-  if(h.length===1){threshold=cat?18:12;}
+  if(h.length===1){threshold=12;}
   else{
     let intervals=[];
     for(let i=1;i<h.length;i++) intervals.push(monthsBetween(new Date(h[i-1].appointment_date+'T12:00:00'),new Date(h[i].appointment_date+'T12:00:00')));
     let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;
-    threshold=Math.max(avg*2,cat?15:9);
+    threshold=Math.max(avg*2,12);
   }
   return {c,h,last,months,threshold};
 }
@@ -807,11 +807,11 @@ function getLostCustomers(){
 function openLostCustomers(){
   let lost=getLostCustomers();
   $('modalTitle').textContent='🔴 Kayıp Müşteriler';
-  let intro='<div class="card"><b>Nasıl hesaplanıyor?</b><div class="muted" style="margin-top:6px;font-size:13px">Müşterinin sadece “Geldi” kayıtları dikkate alınır. Birden fazla geliş varsa kendi ortalama geliş aralığı kullanılır; tek gelişte ise Köpek 12 ay, Kedi 18 ay sınırı uygulanır.</div></div>';
+  let intro='<div class="card"><b>Nasıl hesaplanıyor?</b><div class="muted" style="margin-top:6px;font-size:13px">Müşterinin sadece “Geldi” kayıtları dikkate alınır. Birden fazla geliş varsa kendi ortalama geliş aralığının 2 katı esas alınır; ancak süre 12 aydan kısa olamaz. Tek gelişte ise 12 ay sınırı uygulanır.</div></div>';
   let html=lost.length?lost.map(x=>{
     let c=x.c,type=String(c.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek';
     let lastText=x.last.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
-    return `<div class="row"><div style="flex:1"><b>${esc(c.owner_name||'')}</b><br><small>${type} · ${esc(c.pet_name||'')} · Son geliş: ${lastText}</small><br><small style="color:#a33">🔴 ${Math.floor(x.months)} aydır gelmedi</small></div><button class="btn whatsapp-btn" onclick="whatsappLost('${c.id}')">💬 WhatsApp</button></div>`;
+    return `<div class="row"><div style="flex:1"><b>${esc(c.owner_name||'')}</b><br><small>${type} · ${esc(c.pet_name||'')} · Son geliş: ${lastText}</small><br><small style="color:#a33">🔴 ${Math.floor(x.months)} aydır gelmedi</small></div></div>`;
   }).join(''):'<div class="card"><b>🎉 Kayıp müşteri yok.</b><div class="muted" style="margin-top:5px">Şu anda geri dönmesi beklenen bir müşteri görünmüyor.</div></div>';
   $('modalBody').innerHTML=intro+html;
   $('modal').style.display='flex';
