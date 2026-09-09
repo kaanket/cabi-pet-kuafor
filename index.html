@@ -878,7 +878,6 @@ function monthlyRevenue(offset=0){
       '<div class="card"><small>Satış</small><h2>'+annualSaleCount+'</h2></div>'+
       '<div class="card"><small>💵 Nakit alınan</small><h3>'+annualCashTotal.toLocaleString('tr-TR')+' ₺</h3></div>'+
       '<div class="card"><small>💳 Kart alınan</small><h3>'+annualCardTotal.toLocaleString('tr-TR')+' ₺</h3></div>'+
-      '<div class="card"><small>Ortalama randevu</small><h3>'+annualAvg.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺</h3></div>'+
       '<div class="card"><small>En yüksek ay</small><h3>'+(best.total?best.month+' · '+best.total.toLocaleString('tr-TR')+' ₺':'—')+'</h3></div>'+
       '<div class="card" style="grid-column:1/-1"><small>Yıllık hayvan sayısı</small><h3 style="margin-bottom:0">🐱 '+annualCats+' kedi · 🐶 '+annualDogs+' köpek</h3></div>'+
     '</div>'+
