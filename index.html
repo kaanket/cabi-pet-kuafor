@@ -761,18 +761,19 @@ async function updateSale(id){
   let saleDate=$('editSaleDate').value||localDateStr(0);
   let note=$('editSaleNote').value.trim();
 
-  let {error}=await sb.from('sales').update({
+  let {data:updated,error}=await sb.from('sales').update({
     sale_type:type,
     product_name:type,
     price,
     payment_method:payment,
     sale_date:saleDate,
     note
-  }).eq('id',id);
+  }).eq('id',id).select('*').maybeSingle();
   if(error)return alert('Satış güncellenemedi: '+error.message);
+  if(!updated)return alert('Satış güncellenemedi. Supabase satış güncelleme izni (UPDATE) kapalı görünüyor. V57 SQL kodunu çalıştırın.');
 
   let i=(db.sales||[]).findIndex(x=>x.id===id);
-  if(i>=0)db.sales[i]={...db.sales[i],sale_type:type,product_name:type,price,payment_method:payment,sale_date:saleDate,note};
+  if(i>=0)db.sales[i]={...db.sales[i],...updated};
   render();
   openAllSales();
 }
