@@ -626,6 +626,12 @@ async function openSales(){
         <option value="Diğer">Diğer</option>
       </select>
     </div>
+    <div class="field"><label>Ödeme</label>
+      <div class="payment-options">
+        <label class="payment-option"><input type="radio" name="salePaymentMethod" value="Nakit">💵 Nakit</label>
+        <label class="payment-option"><input type="radio" name="salePaymentMethod" value="Kart">💳 Kart</label>
+      </div>
+    </div>
     <div class="field"><label>Tutar (₺)</label>
       <input id="salePrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
     </div>
@@ -642,6 +648,7 @@ async function saveSale(){
     sale_type:$('saleType').value,
     product_name:$('saleType').value,
     price:Number($('salePrice').value||0),
+    payment_method:document.querySelector('input[name=salePaymentMethod]:checked')?.value||null,
     note:$('saleNote').value.trim()
   };
   if(!(sale.price>0))return alert('Geçerli bir tutar girin.');
@@ -677,7 +684,7 @@ async function openSalesHistory(){
     `<div class="sales-preview-list">${recent.map(s=>`
       <div class="row">
         <div><b>${esc(s.product_name||'')}</b><br>
-        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
         <div style="display:flex;align-items:center;gap:8px">
           <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
         </div>
@@ -697,16 +704,77 @@ function openAllSales(){
   $('modalBody').innerHTML=sales.length?
     `<div class="sales-history-list">${sales.map(s=>`
       <div class="row">
-        <div><b>${esc(s.product_name||'')}</b><br>
-        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}</small></div>
+        <div><b>${esc(s.product_name||s.sale_type||'')}</b><br>
+        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
         <div style="display:flex;align-items:center;gap:8px">
           <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
-          <button class="btn" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+          <button class="btn" style="padding:8px 10px" onclick="editSale('${s.id}')">✏️ Düzenle</button>
+          <button class="btn danger" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
         </div>
       </div>
     `).join('')}</div>`:
     '<div class="card">Henüz ürün satışı yok.</div>';
   $('modal').style.display='flex';
+}
+
+function editSale(id){
+  let s=(db.sales||[]).find(x=>x.id===id);
+  if(!s)return;
+  $('modalTitle').textContent='🛍️ Satışı Düzenle';
+  $('modalBody').innerHTML=`
+    <div class="field"><label>Satış türü</label>
+      <select id="editSaleType">
+        <option value="Aksesuar" ${s.sale_type==='Aksesuar'?'selected':''}>Aksesuar</option>
+        <option value="Kıyafet" ${s.sale_type==='Kıyafet'?'selected':''}>Kıyafet</option>
+        <option value="Bakım ürünü" ${s.sale_type==='Bakım ürünü'?'selected':''}>Bakım ürünü</option>
+        <option value="Sağlık" ${s.sale_type==='Sağlık'?'selected':''}>Sağlık</option>
+        <option value="Diğer" ${(!s.sale_type||s.sale_type==='Diğer')?'selected':''}>Diğer</option>
+      </select>
+    </div>
+    <div class="field"><label>Ödeme</label>
+      <div class="payment-options">
+        <label class="payment-option"><input type="radio" name="editSalePaymentMethod" value="Nakit" ${s.payment_method==='Nakit'?'checked':''}>💵 Nakit</label>
+        <label class="payment-option"><input type="radio" name="editSalePaymentMethod" value="Kart" ${s.payment_method==='Kart'?'checked':''}>💳 Kart</label>
+      </div>
+    </div>
+    <div class="field"><label>Tutar (₺)</label>
+      <input id="editSalePrice" type="number" inputmode="decimal" min="0" step="0.01" value="${s.price||0}">
+    </div>
+    <div class="field"><label>Tarih</label>
+      <input id="editSaleDate" type="date" value="${s.sale_date||localDateStr(0)}">
+    </div>
+    <div class="field"><label>Not</label>
+      <textarea id="editSaleNote">${esc(s.note||'')}</textarea>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="updateSale('${s.id}')">Kaydet</button>
+      <button class="btn" onclick="openAllSales()">← Satışlara Dön</button>
+    </div>`;
+  $('modal').style.display='flex';
+}
+
+async function updateSale(id){
+  let type=$('editSaleType').value;
+  let price=Number($('editSalePrice').value||0);
+  if(!(price>0))return alert('Geçerli bir tutar girin.');
+  let payment=document.querySelector('input[name=editSalePaymentMethod]:checked')?.value||null;
+  let saleDate=$('editSaleDate').value||localDateStr(0);
+  let note=$('editSaleNote').value.trim();
+
+  let {error}=await sb.from('sales').update({
+    sale_type:type,
+    product_name:type,
+    price,
+    payment_method:payment,
+    sale_date:saleDate,
+    note
+  }).eq('id',id);
+  if(error)return alert('Satış güncellenemedi: '+error.message);
+
+  let i=(db.sales||[]).findIndex(x=>x.id===id);
+  if(i>=0)db.sales[i]={...db.sales[i],sale_type:type,product_name:type,price,payment_method:payment,sale_date:saleDate,note};
+  render();
+  openAllSales();
 }
 
 function openPortfolio(){
@@ -758,8 +826,10 @@ function monthlyRevenue(offset=0){
     let sales=(db.sales||[]).filter(s=>s.sale_date && s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((sum,a)=>sum+(Number(a.price)||0),0);
     let salesTotal=sales.reduce((sum,x)=>sum+(Number(x.price)||0),0);
-    let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((sum,a)=>sum+(Number(a.price)||0),0);
-    let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((sum,a)=>sum+(Number(a.price)||0),0);
+    let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((sum,a)=>sum+(Number(a.price)||0),0)
+      +sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((sum,s)=>sum+(Number(s.price)||0),0);
+    let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((sum,a)=>sum+(Number(a.price)||0),0)
+      +sales.filter(s=>(s.payment_method||'')==='Kart').reduce((sum,s)=>sum+(Number(s.price)||0),0);
     let total=serviceTotal+salesTotal;
     let days=new Set(appts.map(a=>a.appointment_date)).size;
     let cats=revenueAppts.filter(a=>{
