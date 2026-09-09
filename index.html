@@ -243,6 +243,17 @@ input:focus,select:focus,textarea:focus{
 .appt-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-top:8px;flex-wrap:wrap}
 .whatsapp-btn{padding:7px 10px;font-size:12px;background:#e8f5f2;color:#155e58;border:1px solid #d5ebe6}
 </style>
+
+<style id="v64-calendar-fix">
+@media (max-width:700px){
+  .appt-slot{min-height:88px!important;height:88px!important;overflow:hidden!important;padding:4px!important;position:relative;}
+  .appt-card{height:72px!important;min-height:72px!important;box-sizing:border-box!important;padding:6px 112px 6px 7px!important;position:relative!important;overflow:hidden!important;}
+  .appt-card>b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .appt-card small{white-space:normal;line-height:17px;max-height:36px;overflow:hidden;}
+  .appt-card .appt-actions{position:absolute!important;right:7px!important;bottom:7px!important;margin:0!important;}
+  .appt-card .status-select{font-size:12px!important;padding:6px 8px!important;}
+}
+</style>
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
