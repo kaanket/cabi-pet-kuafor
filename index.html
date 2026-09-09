@@ -698,22 +698,58 @@ async function openSalesHistory(){
   $('modal').style.display='flex';
 }
 
-function openAllSales(){
-  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
-  $('modalTitle').textContent='🛍️ Tüm Satışlar';
-  $('modalBody').innerHTML=sales.length?
-    `<div class="sales-history-list">${sales.map(s=>`
-      <div class="row">
-        <div><b>${esc(s.product_name||s.sale_type||'')}</b><br>
-        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
-          <button class="btn" style="padding:8px 10px" onclick="editSale('${s.id}')">✏️ Düzenle</button>
-          <button class="btn danger" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+function openAllSales(filter='Tümü'){
+  let allSales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  let types=['Tümü','Aksesuar','Kıyafet','Bakım ürünü','Sağlık','Diğer'];
+  let filtered=filter==='Tümü'?allSales:allSales.filter(s=>(s.sale_type||'Diğer')===filter);
+
+  let totals={};
+  allSales.forEach(s=>{
+    let t=(s.sale_type||'Diğer');
+    totals[t]=(totals[t]||0)+(Number(s.price)||0);
+  });
+  let overall=allSales.reduce((sum,s)=>sum+(Number(s.price)||0),0);
+  let selectedTotal=filtered.reduce((sum,s)=>sum+(Number(s.price)||0),0);
+
+  $('modalTitle').textContent='🛍️ Satış Geçmişi';
+  $('modalBody').innerHTML=
+    '<div class="card" style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div><small class="muted">'+(filter==='Tümü'?'Toplam satış cirosu':filter+' cirosu')+'</small>'+
+        '<h2 style="margin:4px 0 0">'+selectedTotal.toLocaleString('tr-TR')+' ₺</h2></div>'+
+        '<div class="muted" style="text-align:right;font-size:12px">'+filtered.length+' satış</div>'+
+      '</div>'+
+    '</div>'+
+    '<label>Filtre</label>'+
+    '<select id="salesFilter" onchange="openAllSales(this.value)" style="margin-bottom:10px">'+
+      types.map(t=>'<option value="'+esc(t)+'" '+(t===filter?'selected':'')+'>'+esc(t)+'</option>').join('')+
+    '</select>'+
+    '<div class="card" style="margin-bottom:10px">'+
+      '<b>📊 Kategori ciroları</b>'+
+      '<div style="margin-top:8px">'+
+        types.slice(1).filter(t=>totals[t]).map(t=>
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee">'+
+            '<span>'+esc(t)+'</span><b>'+totals[t].toLocaleString('tr-TR')+' ₺</b>'+
+          '</div>'
+        ).join('')+
+        (allSales.length?
+          '<div style="display:flex;justify-content:space-between;padding:9px 0 2px"><b>Toplam</b><b>'+overall.toLocaleString('tr-TR')+' ₺</b></div>':
+          '<div class="muted" style="margin-top:8px">Henüz ürün satışı yok.</div>')+
+      '</div>'+
+    '</div>'+
+    (filtered.length?
+      '<div class="sales-history-list">'+filtered.map(s=>`
+        <div class="row">
+          <div><b>${esc(s.product_name||s.sale_type||'')}</b><br>
+          <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
+            <button class="btn" style="padding:8px 10px" onclick="editSale('${s.id}')">✏️ Düzenle</button>
+            <button class="btn danger" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
+          </div>
         </div>
-      </div>
-    `).join('')}</div>`:
-    '<div class="card">Henüz ürün satışı yok.</div>';
+      `).join('')+'</div>':
+      '<div class="card">Bu filtrede satış yok.</div>');
   $('modal').style.display='flex';
 }
 
