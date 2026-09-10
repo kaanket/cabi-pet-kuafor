@@ -434,13 +434,35 @@ function customerRow(x){let n=missedCount(x.id),risk=n>=2,loyal=loyalCount(x.id)
 function renderCustomers(){let q=trSearch($('search').value);if(!q && customerFilter==='all' && !customerListVisible){$('customers').innerHTML='';return}let c=db.customers.filter(x=>!x.deleted_at && (!q || trSearch(x.owner_name+' '+x.phone+' '+x.pet_name+' '+x.breed+' '+x.pet_type).includes(q)));if(customerFilter!=='all')c=c.filter(x=>customerFilter==='risk'?isRisky(x.id):customerTier(x.id)===customerFilter);c=c.sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr')).slice(0,50);$('customers').innerHTML=c.length?c.map(customerRow).join(''):'<div class="empty">Müşteri bulunamadı.</div>'}
 function clearCustomerSearch(){ $('search').value=''; customerFilter='all'; customerListVisible=true; renderCustomers(); }
 
-function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="breed" placeholder="Toy Poodle"><label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
+function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type" onchange="refreshBreedSelect('breed','type')"><option>Köpek</option><option>Kedi</option></select><label>Irk</label>${breedSelect('breed','Köpek','')}<label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
 function normalizePhone(v){let s=String(v||'').replace(/\D/g,'');if(s.startsWith('90')&&s.length===12)s='0'+s.slice(2);else if(s.length===10)s='0'+s;else s=s.replace(/^0+/,'0');return s;}
 function duplicateCustomer(owner,phone,pet){
   let p=normalizePhone(phone),o=trSearch(owner),pn=trSearch(pet);
   return db.customers.find(x=>!x.deleted_at&&((p&&normalizePhone(x.phone)===p)||(o&&pn&&trSearch(x.owner_name)===o&&trSearch(x.pet_name)===pn)))||null;
 }
-async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let dup=duplicateCustomer($('cname').value,$('phone').value,$('pet').value);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:$('breed').value,weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
+async 
+function breedList(type,current){
+  const dogs=['Toy Poodle','Miniature Poodle','Medium Poodle','Standard Poodle','Pomeranian','Maltese','Shih Tzu','Yorkshire Terrier','Golden Retriever','Husky','Chow Chow','Samoyed','Chihuahua','Cocker','Cavalier King Charles','French Bulldog','Labrador Retriever','German Shepherd','Dachshund'];
+  const cats=['Persian','British Shorthair','Scottish Fold','Scottish Straight','Maine Coon','Siamese','Ragdoll','Bengal','Exotic Shorthair','Turkish Angora','Sphynx','Norwegian Forest','Turkish Van','Tekir'];
+  const arr=String(type||'').toLowerCase()==='kedi'?cats:dogs;
+  const cur=String(current||'');
+  let opts=arr.map(x=>`<option value="${esc(x)}"${cur===x?' selected':''}>${esc(x)}</option>`).join('');
+  if(cur && !arr.includes(cur)) opts=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`+opts;
+  opts+=`<option value="__other__">Diğer / Manuel</option>`;
+  return opts;
+}
+function breedSelect(id,type,current){
+  const cur=String(current||'');
+  const typeIsCat=String(type||'').toLowerCase()==='kedi';
+  const arr=typeIsCat?['Persian','British Shorthair','Scottish Fold','Scottish Straight','Maine Coon','Siamese','Ragdoll','Bengal','Exotic Shorthair','Turkish Angora','Sphynx','Norwegian Forest','Turkish Van','Tekir']:['Toy Poodle','Miniature Poodle','Medium Poodle','Standard Poodle','Pomeranian','Maltese','Shih Tzu','Yorkshire Terrier','Golden Retriever','Husky','Chow Chow','Samoyed','Chihuahua','Cocker','Cavalier King Charles','French Bulldog','Labrador Retriever','German Shepherd','Dachshund'];
+  const manual=cur && !arr.includes(cur);
+  return `<select id="${id}" onchange="toggleBreedOther('${id}')">${breedList(type,manual?'':cur)}</select><input id="${id}Other" placeholder="Irk adını yazın" value="${manual?esc(cur):''}" style="display:${manual?'block':'none'};margin-top:8px">`;
+}
+function toggleBreedOther(id){const s=$(id),o=$(id+'Other');if(!s||!o)return;o.style.display=s.value==='__other__'?'block':'none';if(s.value!=='__other__')o.value='';}
+function getBreed(id){const s=$(id);if(!s)return '';return s.value==='__other__'?String($(id+'Other')?.value||'').trim():s.value;}
+function refreshBreedSelect(id,typeId){const s=$(id),type=$(typeId);if(!s||!type)return;const old=getBreed(id);s.innerHTML=breedList(type.value,old);const vals=Array.from(s.options).map(o=>o.value);if(old&&!vals.includes(old)){s.value='__other__';$(id+'Other').value=old;}toggleBreedOther(id);}
+
+function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let dup=duplicateCustomer($('cname').value,$('phone').value,$('pet').value);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:getBreed('breed'),weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
 function statusClass(s){return 'status-'+String(s||'Bekliyor').toLowerCase().replace('ı','i').replace('ş','s').replace('ü','u').replace('ö','o').replace('ğ','g').replace('ç','c').replaceAll(' ','')}
 function statusLabel(s){return s||'Bekliyor'}
 function apptStatusOptions(selected){return ['Bekliyor','Geldi','Gelmedi','İptal'].map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
@@ -467,8 +489,8 @@ function openAppt(){
     <label>Sahip adı</label><input id="newOwner" placeholder="Ad Soyad">
     <label>Telefon</label><input id="newPhone" type="tel" placeholder="05xx xxx xx xx">
     <label>Hayvan adı</label><input id="newPet" placeholder="Boncuk">
-    <label>Tür</label><select id="newType"><option>Köpek</option><option>Kedi</option></select>
-    <label>Irk</label><input id="newBreed" placeholder="Toy Poodle">
+    <label>Tür</label><select id="newType" onchange="refreshBreedSelect('newBreed','newType')"><option>Köpek</option><option>Kedi</option></select>
+    <label>Irk</label>${breedSelect('newBreed','Köpek','')}
     <label>Kilo (kg)</label><input id="newWeight" type="number" step=".1">
     <label>Özel not</label><textarea id="newNote" placeholder="Kesim şekli, davranış, özel istek..."></textarea>
   </div>
@@ -499,7 +521,7 @@ async function addAppt(){
   let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
   let cid=$('cid').value;
   if(!cid){
-    let owner=$('newOwner')?.value.trim(),phone=$('newPhone')?.value.trim(),pet=$('newPet')?.value.trim(),type=$('newType')?.value,breed=$('newBreed')?.value.trim(),weight=$('newWeight')?.value,note=$('newNote')?.value.trim();
+    let owner=$('newOwner')?.value.trim(),phone=$('newPhone')?.value.trim(),pet=$('newPet')?.value.trim(),type=$('newType')?.value,breed=getBreed('newBreed'),weight=$('newWeight')?.value,note=$('newNote')?.value.trim();
     if(!owner||!pet)return alert('Yeni müşteri için sahip adı ve hayvan adı gerekli.');
     let dup=duplicateCustomer(owner,phone,pet);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;
     let{data:c,error:ce}=await sb.from('customers').insert({owner_id:user.id,owner_name:owner,phone,pet_name:pet,pet_type:type,breed,weight:weight?Number(weight):null,note}).select().single();
@@ -525,7 +547,7 @@ function renderMonthView(d){let dt=new Date(d+'T12:00:00'),y=dt.getFullYear(),m=
 function shiftCal(days){let d=new Date((window.calDate||localDateStr(0))+'T12:00:00');d.setDate(d.getDate()+days);openCalendarView(window.calMode,d.toISOString().slice(0,10))}
 function dropAppt(e,date,time){e.preventDefault();let id=e.dataTransfer.getData('text/plain')||draggedApptId;if(id)moveAppt(id,date,time)}
 function detail(id){let c=db.customers.find(x=>x.id===id),h=db.appointments.filter(a=>a.customer_id===c.id).sort((a,b)=>(b.appointment_date+(b.appointment_time||'')).localeCompare(a.appointment_date+(a.appointment_time||'')));let missed=missedCount(id),cancelled=cancelCount(id),risk=missed>=2,loyal=loyalCount(id),isL=loyal>=5;$('modalTitle').textContent=c.pet_name;$('modalBody').innerHTML=`<div class="card"><b>${esc(c.owner_name)}</b>${isL?'<span class="risk-badge" style="background:#e7f7f1;color:#126b59">🏆 Sadık Müşteri</span>':''}${risk?'<span class="risk-badge">⚠️ Riskli müşteri</span>':''}<br><small style="color:#126b59">🏆 Son 12 ayda ${loyal} kez geldi${isL?' · Sadık müşteri':''}</small><br>📞 ${esc(c.phone||'')}<br>🐾 ${esc(c.pet_type||'')} · ${esc(c.breed||'')} · ${esc(c.weight||'')} kg<br><br>📝 ${esc(c.note||'Not yok')}</div>${missed||cancelled?`<div class="warning-card"><b>Randevu geçmişi</b><br>Habersiz gelmeme: <b>${missed}</b>${cancelled?`<br>İptal: <b>${cancelled}</b>`:''}${risk?'<br><br>⚠️ Bu müşteri riskli olarak işaretlendi.':''}</div>`:''}<div class="actions"><button class="btn primary" onclick="editCustomer('${c.id}')">✏️ Bilgileri Güncelle</button><button class="btn" onclick="whatsapp('${c.id}')">WhatsApp</button><button class="btn danger" onclick="confirmDeleteCustomer('${c.id}')">🗑️ Müşteriyi Sil</button></div><h3>İşlem geçmişi</h3>${h.length?h.map(a=>`<div class="row"><span>${a.appointment_date} · ${esc(a.service)}<br><small>${esc(a.status||'Bekliyor')}${a.payment_method?` · ${a.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></span><b>${Number(a.price||0).toLocaleString('tr-TR')} ₺</b></div>`).join(''):'<div class="empty">Henüz işlem yok.</div>'}`;$('modal').style.display='flex'}
-function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('modalTitle').textContent='Müşteri Bilgilerini Güncelle';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="ucname" value="${esc(c.owner_name)}"><label>Telefon</label><input id="uphone" type="tel" value="${esc(c.phone||'')}"><label>Hayvan adı</label><input id="upet" value="${esc(c.pet_name)}"><label>Tür</label><select id="utype"><option>Köpek</option><option>Kedi</option></select><label>Irk</label><input id="ubreed" value="${esc(c.breed||'')}"><label>Kilo (kg)</label><input id="uweight" type="number" step=".1" value="${c.weight??''}"><label>Özel not</label><textarea id="unote">${esc(c.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateCustomer('${c.id}')">Kaydet</button><button class="btn" onclick="detail('${c.id}')">Vazgeç</button></div>`;$('modal').style.display='flex';$('utype').value=c.pet_type||'Köpek'}
+function editCustomer(id){let c=db.customers.find(x=>x.id===id);if(!c)return;$('modalTitle').textContent='Müşteri Bilgilerini Güncelle';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="ucname" value="${esc(c.owner_name)}"><label>Telefon</label><input id="uphone" type="tel" value="${esc(c.phone||'')}"><label>Hayvan adı</label><input id="upet" value="${esc(c.pet_name)}"><label>Tür</label><select id="utype" onchange="refreshBreedSelect('ubreed','utype')"><option>Köpek</option><option>Kedi</option></select><label>Irk</label>${breedSelect('ubreed',c.pet_type||'Köpek',c.breed||'')}<label>Kilo (kg)</label><input id="uweight" type="number" step=".1" value="${c.weight??''}"><label>Özel not</label><textarea id="unote">${esc(c.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateCustomer('${c.id}')">Kaydet</button><button class="btn" onclick="detail('${c.id}')">Vazgeç</button></div>`;$('modal').style.display='flex';$('utype').value=c.pet_type||'Köpek'}
 async function confirmDeleteCustomer(id){
   let c=db.customers.find(x=>x.id===id);
   if(!c)return;
@@ -547,7 +569,7 @@ async function deleteAppt(id){
   closeModal();
   await loadAll();
 }
-async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:$('ubreed').value.trim(),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
+async function updateCustomer(id){let{error}=await sb.from('customers').update({owner_name:$('ucname').value.trim(),phone:$('uphone').value.trim(),pet_name:$('upet').value.trim(),pet_type:$('utype').value,breed:getBreed('ubreed'),weight:$('uweight').value?Number($('uweight').value):null,note:$('unote').value.trim()}).eq('id',id);if(error)return alert(error.message);await loadAll();detail(id)}
 function whatsappAppointment(apptId){
   let upcoming=db.appointments.find(a=>a.id===apptId);
   if(!upcoming)return alert('Randevu bulunamadı.');
