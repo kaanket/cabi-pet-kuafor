@@ -439,7 +439,8 @@ function breedList(type,current){
   const cats=['Persian','British Shorthair','Scottish Fold','Scottish Straight','Maine Coon','Siamese','Ragdoll','Bengal','Exotic Shorthair','Turkish Angora','Sphynx','Norwegian Forest','Turkish Van','Tekir'];
   const arr=String(type||'').toLowerCase()==='kedi'?cats:dogs;
   const cur=String(current||'');
-  let opts=arr.map(x=>`<option value="${esc(x)}"${cur===x?' selected':''}>${esc(x)}</option>`).join('');
+  const labels={'Toy Poodle':'Toy Poodle — 2–4 kg','Miniature Poodle':'Miniature Poodle — 4–7 kg','Medium Poodle':'Medium Poodle — 7–12 kg','Standard Poodle':'Standard Poodle — 18–30+ kg'};
+  let opts=arr.map(x=>`<option value="${esc(x)}"${cur===x?' selected':''}>${esc(labels[x]||x)}</option>`).join('');
   if(cur && !arr.includes(cur)) opts=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`+opts;
   opts+=`<option value="__other__">Diğer / Manuel</option>`;
   return opts;
