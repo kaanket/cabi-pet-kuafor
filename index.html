@@ -265,6 +265,17 @@ input:focus,select:focus,textarea:focus{
 </style>
 <style id="v76-week-visible">
 @media(max-width:700px){.week-appt-card{visibility:visible!important;opacity:1!important;color:#173535!important;background:#fff!important}.week-appt-card div{visibility:visible!important;opacity:1!important}.week-slot{color:#173535!important}}</style>
+
+<style id="v80-randevu-kart-duzen">
+.row>div:first-child{min-width:0;flex:1;}
+.row>div:last-child{flex:0 0 215px;min-width:215px;}
+.row>div:last-child> .tag,.row>div:last-child> .status-select{vertical-align:middle;}
+@media(max-width:700px){
+  .row{align-items:flex-start;}
+  .row>div:last-child{flex-basis:210px;min-width:210px;}
+  .row>div:last-child> .tag{display:inline-block;}
+}
+</style>
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
