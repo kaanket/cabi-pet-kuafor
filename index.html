@@ -595,9 +595,9 @@ function whatsappAppointment(apptId){
   let text;
   if(isIPhone){
     const paw='\uD83D\uDC3E',calendar='\uD83D\uDCC5',clock='\u23F0';
-    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere. '+paw;
+    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması '+paw+nl+nl+paw+' '+c.pet_name+nl+calendar+' Tarih: '+date+nl+(time?clock+' Saat: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi verilmesini rica ederiz.'+nl+nl+'Görüşmek üzere. '+paw;
   }else{
-    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması'+nl+nl+'Evcil Hayvan: '+c.pet_name+nl+'Randevu Tarihi: '+date+nl+(time?'Randevu Saati: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi vermenizi rica ederiz.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
+    text='Merhaba '+c.owner_name+', Cabi Pet Kuaför randevu hatırlatması'+nl+nl+'Evcil Hayvan: '+c.pet_name+nl+'Randevu Tarihi: '+date+nl+(time?'Randevu Saati: '+time+nl:'')+nl+'Randevunuza gelemeyecekseniz önceden bilgi verilmesini rica ederiz.'+nl+nl+'Görüşmek üzere.'+nl+nl+'Cabi Pet Kuaför';
   }
   window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
 }
