@@ -1069,8 +1069,17 @@ function monthlyRevenue(offset=0){
     let n=(a.service||'Diğer').trim()||'Diğer';
     services[n]=(services[n]||0)+(Number(a.price)||0);
   });
-  let serviceRows=Object.entries(services).sort((a,b)=>b[1]-a[1]);
   let maxMonth=Math.max(...rows.map(r=>r.total),1);
+
+  // Hayvan türüne göre hizmet cirosu: yalnızca durumu "Geldi" olan randevular.
+  let petTypeRevenue={kedi:0,kopek:0};
+  db.appointments.forEach(a=>{
+    if(!a.appointment_date || !a.appointment_date.startsWith(year+'-') || (a.status||'Bekliyor')!=='Geldi') return;
+    let c=db.customers.find(x=>x.id===a.customer_id);
+    let t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');
+    if(t==='kedi') petTypeRevenue.kedi += Number(a.price)||0;
+    else if(t==='köpek' || t==='kopek') petTypeRevenue.kopek += Number(a.price)||0;
+  });
 
   let html=
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
@@ -1109,16 +1118,16 @@ function monthlyRevenue(offset=0){
     '</div>';
   });
 
-  if(serviceRows.length){
-    html+='<h3 style="margin:18px 0 10px">✂️ Hizmet Bazında Ciro</h3>';
-    serviceRows.forEach(([name,total])=>{
-      let pct=annualTotal?total/annualTotal*100:0;
-      html+='<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid #eee">'+
-        '<span>'+name+' <small class="muted">('+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span>'+
-        '<b>'+total.toLocaleString('tr-TR')+' ₺</b></div>';
-    });
+  {
+    let animalTotal=petTypeRevenue.kedi+petTypeRevenue.kopek;
+    let catPct=animalTotal?petTypeRevenue.kedi/animalTotal*100:0;
+    let dogPct=animalTotal?petTypeRevenue.kopek/animalTotal*100:0;
+    html+='<h3 style="margin:18px 0 10px">🐾 Hayvan Türüne Göre Ciro</h3>';
+    html+='<div class="card" style="padding:14px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-bottom:1px solid #eee"><span>🐱 Kedi Cirosu <small class="muted">('+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+petTypeRevenue.kedi.toLocaleString('tr-TR')+' ₺</b></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 2px"><span>🐶 Köpek Cirosu <small class="muted">('+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+petTypeRevenue.kopek.toLocaleString('tr-TR')+' ₺</b></div>'+
+    '</div>';
   }
-
 
   let saleRows={};
   (db.sales||[]).forEach(s=>{
