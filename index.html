@@ -330,6 +330,24 @@ input:focus,select:focus,textarea:focus{
   .appt-datetime-grid input,.appt-datetime-grid select{font-size:15px!important;padding-left:10px!important;padding-right:8px!important}
 }
 </style>
+<style id="v85-new-appt">
+.v85-appt-form{display:block;}
+.v85-date-time{margin-bottom:10px!important;}
+.v85-results{margin:8px 0 10px;max-height:210px;overflow:auto;border:1px solid #dce8e6;border-radius:16px;background:#fff;}
+.v85-results:empty{display:none;}
+.v85-results .row{padding:12px 14px;border-bottom:1px solid #e6eeec;}
+.v85-results .row:last-child{border-bottom:0;}
+.v85-selected{padding:11px 13px;margin:6px 0 14px;border-radius:14px;background:#eef8f5;color:#176d60;min-height:20px;}
+.v85-new-customer{margin-bottom:14px;}
+.v85-service-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 15px;}
+.v85-service{border:1px solid #d6e5e2;background:#fff;color:#173535;border-radius:13px;padding:12px 9px;font-size:14px;font-weight:700;min-height:48px;cursor:pointer;}
+.v85-service.selected{background:#168276;color:#fff;border-color:#168276;box-shadow:0 3px 10px #16827622;}
+@media(max-width:520px){
+ .v85-service{font-size:13px;padding:11px 6px;}
+ .v85-date-time{gap:8px!important;}
+ .v85-date-time input,.v85-date-time select{font-size:14px!important;}
+}
+</style>
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
@@ -556,27 +574,58 @@ function timeOptions(selected='10:00'){
 }
 function openAppt(){
   $('modalTitle').textContent='Yeni Randevu';
-  $('modalBody').innerHTML=`<div class="appt-datetime-grid"><div><label>Tarih</label><input id="date" type="date" value="${localDateStr(0)}"></div><div><label>Saat</label><select id="time">${timeOptions()}</select></div></div>
-  <label>Müşteri / Hayvan Ara</label>
-  <input id="apptSearch" type="search" placeholder="İsim, telefon veya hayvan adı yaz..." oninput="filterApptCustomers()">
-  <input id="cid" type="hidden"><div id="apptResults" class="card" style="margin:8px 0 14px;padding:0;max-height:190px;overflow:auto"></div>
-  <div id="newApptCustomer" style="display:none" class="card">
-    <b>➕ Yeni Müşteri Bilgileri</b>
-    <label>Sahip adı</label><input id="newOwner" placeholder="Ad Soyad">
-    <label>Telefon</label><input id="newPhone" type="tel" placeholder="05xx xxx xx xx">
-    <label>Hayvan adı</label><input id="newPet" placeholder="Boncuk">
-    <label>Tür</label><select id="newType" onchange="refreshBreedSelect('newBreed','newType')"><option>Köpek</option><option>Kedi</option></select>
-    <label>Irk</label>${breedSelect('newBreed','Köpek','')}
-    <label>Kilo (kg)</label><input id="newWeight" type="number" step=".1">
-    <label>Özel not</label><textarea id="newNote" placeholder="Kesim şekli, davranış, özel istek..."></textarea>
-  </div>
-  <div id="apptSelected" class="muted" style="margin-bottom:14px">Müşteri seçilmedi.</div>
-  <label>İşlem</label><select id="service"><option>Makina</option><option>Makas</option><option>Hijyen & Banyo</option><option>Tarama & Banyo</option><option>Kıtık açma</option><option>Tırnak bakım</option><option>Tıraş</option></select>
-  <label>Ödeme</label><div class="payment-options"><label class="payment-option"><input type="radio" name="paymentMethod" value="Nakit">💵 Nakit</label><label class="payment-option"><input type="radio" name="paymentMethod" value="Kart">💳 Kart</label></div>
-  <label>Ücret (₺)</label><input id="price" type="number" placeholder="Ücreti girin">
-  <label>Durum</label><select id="status"><option>Bekliyor</option><option>Geldi</option><option>Gelmedi</option></select>
-  <label>Not</label><textarea id="anote"></textarea><div class="actions"><button class="btn primary" onclick="addAppt()">Randevuyu Kaydet</button><button class="btn" onclick="goHome()">Ana Ekrana Dön</button></div>`;
+  $('modalBody').innerHTML=`
+  <div class="v85-appt-form">
+    <div class="appt-datetime-grid v85-date-time">
+      <div><label>📅 Tarih</label><input id="date" type="date" value="${localDateStr(0)}"></div>
+      <div><label>🕐 Saat</label><select id="time">${timeOptions()}</select></div>
+    </div>
+
+    <label>👤 Müşteri / Hayvan</label>
+    <input id="apptSearch" type="search" placeholder="İsim, telefon veya hayvan adı..." oninput="filterApptCustomers()">
+    <input id="cid" type="hidden">
+    <div id="apptResults" class="v85-results"></div>
+
+    <div id="newApptCustomer" style="display:none" class="card v85-new-customer">
+      <b>➕ Yeni Müşteri</b>
+      <label>Sahip adı</label><input id="newOwner" placeholder="Ad Soyad">
+      <label>Telefon</label><input id="newPhone" type="tel" placeholder="05xx xxx xx xx">
+      <label>Hayvan adı</label><input id="newPet" placeholder="Boncuk">
+      <label>Tür</label><select id="newType" onchange="refreshBreedSelect('newBreed','newType')"><option>Köpek</option><option>Kedi</option></select>
+      <label>Irk</label>${breedSelect('newBreed','Köpek','')}
+      <label>Kilo (kg)</label><input id="newWeight" type="number" step=".1">
+      <label>Özel not</label><textarea id="newNote" placeholder="Kesim şekli, davranış, özel istek..."></textarea>
+    </div>
+
+    <div id="apptSelected" class="v85-selected">Müşteri seçilmedi.</div>
+
+    <label>✂️ İşlem</label>
+    <div class="v85-service-grid">
+      <button type="button" class="v85-service" data-service="Makina" onclick="selectServiceV85(this)">Makina</button>
+      <button type="button" class="v85-service" data-service="Makas" onclick="selectServiceV85(this)">Makas</button>
+      <button type="button" class="v85-service" data-service="Hijyen & Banyo" onclick="selectServiceV85(this)">Hijyen & Banyo</button>
+      <button type="button" class="v85-service" data-service="Tarama & Banyo" onclick="selectServiceV85(this)">Tarama & Banyo</button>
+      <button type="button" class="v85-service" data-service="Kıtık açma" onclick="selectServiceV85(this)">Kıtık açma</button>
+      <button type="button" class="v85-service" data-service="Tırnak bakım" onclick="selectServiceV85(this)">Tırnak bakım</button>
+      <button type="button" class="v85-service" data-service="Tıraş" onclick="selectServiceV85(this)">Tıraş</button>
+    </div>
+    <input id="service" type="hidden" value="Makina">
+
+    <label>💳 Ödeme</label>
+    <div class="payment-options"><label class="payment-option"><input type="radio" name="paymentMethod" value="Nakit">💵 Nakit</label><label class="payment-option"><input type="radio" name="paymentMethod" value="Kart">💳 Kart</label></div>
+    <label>💰 Ücret (₺)</label><input id="price" type="number" placeholder="Ücreti girin">
+    <label>Durum</label><select id="status"><option>Bekliyor</option><option>Geldi</option><option>Gelmedi</option></select>
+    <label>Not</label><textarea id="anote"></textarea>
+    <div class="actions"><button class="btn primary" onclick="addAppt()">✓ Randevuyu Kaydet</button><button class="btn" onclick="goHome()">Ana Ekrana Dön</button></div>
+  </div>`;
   $('modal').style.display='flex';filterApptCustomers();
+  selectServiceV85(document.querySelector('.v85-service[data-service="Makina"]'));
+}
+function selectServiceV85(btn){
+  if(!btn)return;
+  document.querySelectorAll('.v85-service').forEach(x=>x.classList.remove('selected'));
+  btn.classList.add('selected');
+  $('service').value=btn.dataset.service;
 }
 function showNewApptCustomer(){
   $('newApptCustomer').style.display='block';
