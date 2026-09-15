@@ -298,6 +298,38 @@ input:focus,select:focus,textarea:focus{
   .status-select{font-size:11px!important;padding:7px 7px!important}
 }
 </style>
+
+<style id="v84-fix">
+/* V84 — Yeni Randevu mobil düzen düzeltmesi */
+.appt-datetime-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:12px!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0 0 8px!important;
+}
+.appt-datetime-grid>div{min-width:0!important;width:100%!important;overflow:hidden!important}
+.appt-datetime-grid label{display:block!important;margin:0 0 5px!important}
+.appt-datetime-grid input,.appt-datetime-grid select{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  min-height:52px!important;
+  margin:0 0 10px!important;
+  padding:12px 10px!important;
+  border-radius:14px!important;
+  font-size:15px!important;
+}
+#modalBody{min-width:0!important;overflow-x:hidden!important}
+@media(max-width:520px){
+  .sheet{padding:18px!important;max-height:92vh!important}
+  .appt-datetime-grid{gap:9px!important}
+  .appt-datetime-grid input,.appt-datetime-grid select{font-size:15px!important;padding-left:10px!important;padding-right:8px!important}
+}
+</style>
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
