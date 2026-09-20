@@ -647,7 +647,17 @@ function showNewApptCustomer(){
   $('apptSelected').textContent='Yeni müşteri kaydedilecek.';
   $('cid').value='';
   const q=($('apptSearch').value||'').trim();
-  if(q && !$('newOwner').value) $('newOwner').value=q;
+  if(q){
+    // Arama sonucu bulunamadığında yazılan değeri uygun müşteri alanına otomatik aktar.
+    const phoneLike=/^\+?[0-9][0-9\s().-]{6,}$/.test(q);
+    if(phoneLike){
+      if(!$('newPhone').value) $('newPhone').value=q;
+      $('newOwner').focus();
+    }else{
+      if(!$('newOwner').value) $('newOwner').value=q;
+      $('newPhone').focus();
+    }
+  }
 }
 function filterApptCustomers(){
   let q=trSearch($('apptSearch').value);
