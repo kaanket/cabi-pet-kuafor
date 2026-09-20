@@ -419,7 +419,7 @@ input:focus,select:focus,textarea:focus{
 <div id="tomorrowAppointments" class="card"></div>
 <div class="section" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
   <span>Müşteri Ara</span>
-  <button class="btn primary" style="padding:8px 12px;font-size:12px" onclick="openCustomer()">＋ Yeni Müşteri</button>
+  <button class="btn primary" style="padding:8px 12px;font-size:12px" onclick="openCustomer(true)">＋ Yeni Müşteri</button>
 </div>
 <div class="card">
 <div style="position:relative">
@@ -564,7 +564,7 @@ function breedSelect(id,type,current){
 function toggleBreedOther(id){const s=$(id),o=$(id+'Other');if(!s||!o)return;o.style.display=s.value==='__other__'?'block':'none';if(s.value!=='__other__')o.value='';}
 function getBreed(id){const s=$(id);if(!s)return '';return s.value==='__other__'?String($(id+'Other')?.value||'').trim():s.value;}
 function refreshBreedSelect(id,typeId){const s=$(id),type=$(typeId);if(!s||!type)return;const old=getBreed(id);s.innerHTML=breedList(type.value,old);const vals=Array.from(s.options).map(o=>o.value);if(old&&!vals.includes(old)){s.value='__other__';$(id+'Other').value=old;}toggleBreedOther(id);}
-function openCustomer(){$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type" onchange="refreshBreedSelect('breed','type')"><option>Köpek</option><option>Kedi</option></select><label>Irk</label>${breedSelect('breed','Köpek','')}<label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex'}
+function openCustomer(prefillFromSearch=false){let prefill=prefillFromSearch?String($('search')?.value||'').trim():'';$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type" onchange="refreshBreedSelect('breed','type')"><option>Köpek</option><option>Kedi</option></select><label>Irk</label>${breedSelect('breed','Köpek','')}<label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex';if(prefill){const phoneLike=/^\+?[0-9][0-9\s().-]{6,}$/.test(prefill);if(phoneLike){$('phone').value=prefill;$('phone').focus()}else{$('cname').value=prefill;$('cname').focus()}}}
 function normalizePhone(v){let s=String(v||'').replace(/\D/g,'');if(s.startsWith('90')&&s.length===12)s='0'+s.slice(2);else if(s.length===10)s='0'+s;else s=s.replace(/^0+/,'0');return s;}
 function duplicateCustomer(owner,phone,pet){
   let p=normalizePhone(phone),o=trSearch(owner),pn=trSearch(pet);
