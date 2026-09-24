@@ -1265,7 +1265,7 @@ function monthlyRevenue(offset=0){
     let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
-    let total=serviceTotal+salesTotal, monthExpenses=expenses.filter(x=>expenseMonthKey(x.date)===year+'-'+String(m+1).padStart(2,'0'));
+    let total=serviceTotal+salesTotal, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
     let expenseTotal=monthExpenses.reduce((n,x)=>n+(Number(x.amount)||0),0), net=total-expenseTotal;
     let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((n,x)=>n+(Number(x.price)||0),0);
     let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Kart').reduce((n,x)=>n+(Number(x.price)||0),0);
