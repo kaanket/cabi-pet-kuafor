@@ -467,7 +467,7 @@ input:focus,select:focus,textarea:focus{
 const SUPABASE_URL='https://ibypczlxqhrrownltryc.supabase.co';
 const SUPABASE_KEY='sb_publishable_zh2dVONzQFc2hTpAfCKuXg_hnfSOsTo';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let db={customers:[],appointments:[],sales:[]},channel=null;
+let db={customers:[],appointments:[],sales:[],expenses:[],expense_categories:[]},channel=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
 function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
@@ -477,16 +477,27 @@ async function logout(){await sb.auth.signOut()}
 async function start(){let{data:{session}}=await sb.auth.getSession();if(session){showApp();await loadAll();subscribe()}else{$('auth').style.display='flex';$('main').style.display='none'}sb.auth.onAuthStateChange(async(_e,s)=>{if(s){showApp();await loadAll();subscribe()}else{if(channel)sb.removeChannel(channel);$('auth').style.display='flex';$('main').style.display='none'}})}
 function showApp(){$('auth').style.display='none';$('main').style.display='block'}
 async function loadAll(){
+  let {data:{user}}=await sb.auth.getUser();
+  if(!user){$('auth').style.display='flex';$('main').style.display='none';return}
   let c=await sb.from('customers').select('*').order('created_at',{ascending:false});
   let a=await sb.from('appointments').select('*').order('appointment_date',{ascending:true});
   if(c.error||a.error){alert((c.error||a.error).message);return}
-  db.customers=c.data||[];
-  db.appointments=a.data||[];
+  db.customers=c.data||[];db.appointments=a.data||[];
   let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});
   db.sales=s.error?[]:(s.data||[]);
+  await loadExpensesCloud(user.id);
   render();
 }
-function subscribe(){if(channel)sb.removeChannel(channel);channel=sb.channel('cabi-sync').on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll()).on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll()).subscribe()}
+function subscribe(){
+  if(channel)sb.removeChannel(channel);
+  channel=sb.channel('cabi-sync')
+    .on('postgres_changes',{event:'*',schema:'public',table:'customers'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'expense_categories'},()=>loadAll())
+    .subscribe()
+}
 function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
 function trSearch(v){
   return String(v||'')
@@ -1062,61 +1073,111 @@ function openPortfolio(){
 
 function openRevenue(){monthlyRevenue(0)}
 const DEFAULT_EXPENSE_CATEGORIES=['Kira','Personel','Elektrik','Su','Doğalgaz','İnternet','Malzeme','Temizlik','Vergi','Diğer'];
-function getExpenseCategories(){
-  try{
-    let raw=localStorage.getItem('cabi_expense_categories');
-    let arr=raw?JSON.parse(raw):DEFAULT_EXPENSE_CATEGORIES.slice();
-    return Array.isArray(arr)&&arr.length?arr:DEFAULT_EXPENSE_CATEGORIES.slice();
-  }catch(e){return DEFAULT_EXPENSE_CATEGORIES.slice()}
+const EXPENSES_STORAGE_KEY='cabi_expenses';
+const EXPENSE_CATS_STORAGE_KEY='cabi_expense_categories';
+
+function getLocalExpenses(){
+  try{let r=localStorage.getItem(EXPENSES_STORAGE_KEY);let a=r?JSON.parse(r):[];return Array.isArray(a)?a:[]}catch(e){return []}
 }
-function saveExpenseCategories(arr){localStorage.setItem('cabi_expense_categories',JSON.stringify(arr));}
+function getLocalExpenseCategories(){
+  try{let r=localStorage.getItem(EXPENSE_CATS_STORAGE_KEY);let a=r?JSON.parse(r):[];return Array.isArray(a)?a:[]}catch(e){return []}
+}
+function getExpenses(){return Array.isArray(db.expenses)?db.expenses:[]}
+function getExpenseCategories(){return Array.isArray(db.expense_categories)&&db.expense_categories.length?db.expense_categories:DEFAULT_EXPENSE_CATEGORIES.slice()}
+function saveExpenses(arr){db.expenses=Array.isArray(arr)?arr:[]}
+function saveExpenseCategories(arr){db.expense_categories=Array.isArray(arr)&&arr.length?arr:DEFAULT_EXPENSE_CATEGORIES.slice()}
+function money(n){return Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₺'}
+function expenseMonthKey(date){return String(date||'').slice(0,7)}
+
+async function syncLocalExpensesToCloud(userId){
+  let local=getLocalExpenses();
+  if(!local.length)return;
+  let rows=local.map(x=>({
+    id:x.id||crypto.randomUUID(), owner_id:userId,
+    expense_date:x.expense_date||x.date, category:x.category||'Diğer',
+    amount:Number(x.amount||0), payment_method:x.payment_method||'Nakit',
+    note:x.note||null
+  })).filter(x=>x.expense_date&&x.amount>0);
+  if(!rows.length)return;
+  let {error}=await sb.from('expenses').upsert(rows,{onConflict:'id'});
+  if(error){console.warn('Gider bulut aktarımı:',error.message);return}
+  localStorage.removeItem(EXPENSES_STORAGE_KEY);
+}
+
+async function syncLocalExpenseCategoriesToCloud(userId){
+  let local=getLocalExpenseCategories();
+  if(!local.length)return;
+  let rows=local.map(name=>({id:crypto.randomUUID(),owner_id:userId,name:String(name).trim()})).filter(x=>x.name);
+  if(!rows.length)return;
+  // Only migrate custom/local categories when cloud has no categories.
+  let {data:existing,error:readError}=await sb.from('expense_categories').select('name');
+  if(readError){console.warn('Gider kalemleri okunamadı:',readError.message);return}
+  if(!(existing||[]).length){
+    let {error}=await sb.from('expense_categories').upsert(rows,{onConflict:'id'});
+    if(error){console.warn('Gider kalemleri aktarımı:',error.message);return}
+  }
+  localStorage.removeItem(EXPENSE_CATS_STORAGE_KEY);
+}
+
+async function loadExpensesCloud(userId){
+  await syncLocalExpensesToCloud(userId);
+  await syncLocalExpenseCategoriesToCloud(userId);
+  let e=await sb.from('expenses').select('*').order('expense_date',{ascending:false});
+  if(e.error){console.warn('Giderler yüklenemedi:',e.error.message);db.expenses=[]}
+  else db.expenses=e.data||[];
+  let c=await sb.from('expense_categories').select('*').order('name',{ascending:true});
+  if(c.error){console.warn('Gider kalemleri yüklenemedi:',c.error.message);db.expense_categories=DEFAULT_EXPENSE_CATEGORIES.slice()}
+  else{
+    db.expense_categories=c.data||[];
+    if(!db.expense_categories.length) db.expense_categories=DEFAULT_EXPENSE_CATEGORIES.slice();
+  }
+}
+
 function openExpenseCategories(){
   let cats=getExpenseCategories();
   $('modalTitle').textContent='💸 Gider Kalemleri';
   $('modalBody').innerHTML=`
     <div class="card" style="margin-bottom:12px">
       <b>Gider kalemlerini yönet</b>
-      <div class="muted" style="margin-top:5px;font-size:12px">Gider girerken kullanacağın başlıkları buradan ekleyebilir veya silebilirsin.</div>
+      <div class="muted" style="margin-top:5px;font-size:12px">Bulutta saklanır; aynı Cabi hesabıyla giriş yapılan tüm cihazlarda ortak kullanılır.</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <input id="newExpenseCategory" placeholder="Yeni gider kalemi" style="flex:1">
-      <button class="btn primary" onclick="addExpenseCategory()">＋ Ekle</button>
+      <button class="btn primary" onclick="addExpenseCategory()">Ekle</button>
     </div>
-    <div id="expenseCategoryList"></div>
-    <button class="btn" style="width:100%;margin-top:14px" onclick="openSettings()">← Ayarlara Dön</button>`;
+    <div id="expenseCategoryList"></div>`;
   renderExpenseCategories();
   $('modal').style.display='flex';
 }
 function renderExpenseCategories(){
-  let el=$('expenseCategoryList'); if(!el)return;
+  let el=$('expenseCategoryList');if(!el)return;
   let cats=getExpenseCategories();
-  el.innerHTML=cats.map((c,i)=>`<div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 4px"><b>💸 ${esc(c)}</b><button class="btn" style="padding:7px 10px;color:#a33" onclick="deleteExpenseCategory(${i})">Sil</button></div>`).join('');
+  el.innerHTML=cats.map((x,i)=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #eee"><b>${esc(x.name||x)}</b><button class="btn" onclick="deleteExpenseCategory('${esc(x.id||'')}','${i}')">Sil</button></div>`).join('');
 }
-function addExpenseCategory(){
-  let input=$('newExpenseCategory'); if(!input)return;
-  let name=input.value.trim(); if(!name)return alert('Gider kalemi adı gir.');
+async function addExpenseCategory(){
+  let input=$('newExpenseCategory'),name=input.value.trim();if(!name)return alert('Gider kalemi adı gir.');
   let cats=getExpenseCategories();
-  if(cats.some(x=>x.toLocaleLowerCase('tr-TR')===name.toLocaleLowerCase('tr-TR')))return alert('Bu gider kalemi zaten var.');
-  cats.push(name); saveExpenseCategories(cats); input.value=''; renderExpenseCategories();
+  if(cats.some(x=>String(x.name||x).toLocaleLowerCase('tr-TR')===name.toLocaleLowerCase('tr-TR')))return alert('Bu gider kalemi zaten var.');
+  let {data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  let {data,error}=await sb.from('expense_categories').insert({owner_id:user.id,name}).select('*').single();
+  if(error)return alert('Gider kalemi kaydedilemedi: '+error.message);
+  db.expense_categories=[...db.expense_categories,data];input.value='';renderExpenseCategories();
 }
-function deleteExpenseCategory(i){
-  let cats=getExpenseCategories();
-  if(cats.length<=1)return alert('En az bir gider kalemi olmalı.');
-  if(!confirm('“'+cats[i]+'” gider kalemi silinsin mi?'))return;
-  cats.splice(i,1); saveExpenseCategories(cats); renderExpenseCategories();
+async function deleteExpenseCategory(id,i){
+  let cats=getExpenseCategories();if(cats.length<=1)return alert('En az bir gider kalemi olmalı.');
+  if(!confirm('Bu gider kalemi silinsin mi?'))return;
+  if(id){
+    let {error}=await sb.from('expense_categories').delete().eq('id',id);
+    if(error)return alert('Gider kalemi silinemedi: '+error.message);
+    db.expense_categories=db.expense_categories.filter(x=>x.id!==id);
+  }else{
+    cats.splice(Number(i),1);db.expense_categories=cats;
+  }
+  renderExpenseCategories();
 }
 
-const EXPENSES_STORAGE_KEY='cabi_expenses';
-function getExpenses(){
-  try{let r=localStorage.getItem(EXPENSES_STORAGE_KEY);let a=r?JSON.parse(r):[];return Array.isArray(a)?a:[]}catch(e){return []}
-}
-function saveExpenses(arr){localStorage.setItem(EXPENSES_STORAGE_KEY,JSON.stringify(arr));}
-function money(n){return Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₺'}
-function expenseMonthKey(date){return String(date||'').slice(0,7)}
 function openExpenses(year,month){
-  let d=new Date();
-  if(year==null) year=d.getFullYear();
-  if(month==null) month=d.getMonth();
+  let d=new Date();if(year==null)year=d.getFullYear();if(month==null)month=d.getMonth();
   let monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let key=year+'-'+String(month+1).padStart(2,'0');
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
@@ -1124,37 +1185,25 @@ function openExpenses(year,month){
     <b style="font-size:18px">${monthNames[month]} ${year}</b>
     <button class="btn" onclick="openExpenses(${month===11?year+1:year},${month===11?0:month+1})">›</button>
   </div>
-  <div class="card" style="margin-bottom:10px">
-    <small>Bu ay toplam gider</small><h2 id="expenseMonthTotal" style="margin:5px 0">0 ₺</h2>
-    <div class="muted" style="font-size:12px">Giderleri buradan ekleyebilir ve silebilirsin.</div>
-  </div>
+  <div class="card" style="margin-bottom:10px"><small>Bu ay toplam gider</small><h2 id="expenseMonthTotal" style="margin:5px 0">0 ₺</h2><div class="muted" style="font-size:12px">Giderleri buradan ekleyebilir ve silebilirsin.</div></div>
   <button class="btn primary" style="width:100%;margin-bottom:12px" onclick="openExpenseForm('${key}')">＋ Gider Ekle</button>
   <div id="expenseList"></div>
-  <button class="btn" style="width:100%;margin-top:14px" onclick="monthlyRevenue(0)">← Ciroya Dön</button>`;
-  $('modalTitle').textContent='💸 Giderler';
-  $('modalBody').innerHTML=html;
-  renderExpenses(year,month);
-  $('modal').style.display='flex';
+  <button class="btn" style="width:100%;margin-top:12px" onclick="monthlyRevenue(${year-new Date().getFullYear()})">← Ciroya Dön</button>`;
+  $('modalTitle').textContent='💸 Giderler';$('modalTitle').style.color='#b42318';$('modalBody').innerHTML=html;$('modal').style.display='flex';
+  renderExpenseList(key);
 }
-function renderExpenses(year,month){
-  let key=year+'-'+String(month+1).padStart(2,'0');
-  let list=getExpenses().filter(x=>expenseMonthKey(x.date)===key).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  let total=list.reduce((n,x)=>n+Number(x.amount||0),0);
-  let el=$('expenseMonthTotal');if(el)el.textContent=money(total);
-  let box=$('expenseList');if(!box)return;
-  if(!list.length){box.innerHTML='<div class="empty">Bu ay henüz gider kaydı yok.</div>';return;}
-  box.innerHTML=list.map(x=>`<div class="card" style="margin:8px 0;padding:13px">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-      <div><b>💸 ${esc(x.category||'Diğer')}</b><div class="muted" style="font-size:12px;margin-top:4px">${esc(x.date||'')} · ${esc(x.payment_method||'')}</div>${x.note?`<div style="font-size:12px;margin-top:5px">${esc(x.note)}</div>`:''}</div>
-      <div style="text-align:right"><b style="font-size:17px">${money(x.amount)}</b><br><button class="btn" style="padding:6px 9px;color:#a33;margin-top:5px" onclick="deleteExpense('${x.id}',${year},${month})">Sil</button></div>
-    </div></div>`).join('');
+function renderExpenseList(key){
+  let arr=getExpenses().filter(x=>expenseMonthKey(x.expense_date||x.date)===key).sort((a,b)=>(b.expense_date||b.date||'').localeCompare(a.expense_date||a.date||''));
+  let total=arr.reduce((n,x)=>n+(Number(x.amount)||0),0);
+  let t=$('expenseMonthTotal');if(t)t.textContent=money(total);
+  let el=$('expenseList');if(!el)return;
+  el.innerHTML=arr.length?arr.map(x=>`<div class="row" style="display:flex;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid #eee"><div><b>${esc(x.category)}</b><br><small class="muted">${esc(x.expense_date||x.date||'')}${x.payment_method?' · '+esc(x.payment_method):''}${x.note?' · '+esc(x.note):''}</small></div><div style="display:flex;align-items:center;gap:8px"><strong>${money(x.amount)}</strong><button class="btn" onclick="deleteExpense('${x.id}',${key.slice(0,4)},${Number(key.slice(5,7))-1})">Sil</button></div></div>`).join(''):'<div class="card">Bu ay henüz gider kaydı yok.</div>';
 }
 function openExpenseForm(key){
-  let cats=getExpenseCategories();
-  let today=localDateStr(0);
-  $('modalTitle').textContent='＋ Gider Ekle';
-  $('modalBody').innerHTML=`<div class="field"><label>Tarih</label><input id="expenseDate" type="date" value="${key?key+'-01':today}"></div>
-    <div class="field"><label>Gider Kalemi</label><select id="expenseCategory">${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+  let cats=getExpenseCategories().map(x=>String(x.name||x)).filter(Boolean);
+  $('modalTitle').textContent='💸 Gider Ekle';
+  $('modalBody').innerHTML=`<div class="field"><label>Tarih</label><input id="expenseDate" type="date" value="${key}-${String(new Date().getDate()).padStart(2,'0')}"></div>
+    <div class="field"><label>Gider Kalemi</label><select id="expenseCategory">${cats.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div>
     <div class="field"><label>Tutar (₺)</label><input id="expenseAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0"></div>
     <div class="field"><label>Ödeme</label><div class="payment-options"><label class="payment-option"><input type="radio" name="expensePaymentMethod" value="Nakit" checked>💵 Nakit</label><label class="payment-option"><input type="radio" name="expensePaymentMethod" value="Kart">💳 Kart</label><label class="payment-option"><input type="radio" name="expensePaymentMethod" value="Havale">🏦 Havale</label></div></div>
     <div class="field"><label>Not</label><textarea id="expenseNote" placeholder="İsteğe bağlı"></textarea></div>
@@ -1162,26 +1211,34 @@ function openExpenseForm(key){
     <button class="btn" style="width:100%;margin-top:8px" onclick="openExpenses(${key?Number(key.slice(0,4)):new Date().getFullYear()},${key?Number(key.slice(5,7))-1:new Date().getMonth()})">← Giderlere Dön</button>`;
   $('modal').style.display='flex';
 }
-function saveExpense(){
-  let date=$('expenseDate').value, category=$('expenseCategory').value, amount=Number($('expenseAmount').value||0);
-  if(!date)return alert('Tarih seç.');
-  if(!category)return alert('Gider kalemi seç.');
-  if(!(amount>0))return alert('Geçerli bir tutar gir.');
+async function saveExpense(){
+  let date=$('expenseDate').value,category=$('expenseCategory').value,amount=Number($('expenseAmount').value||0);
+  if(!date)return alert('Tarih seç.');if(!category)return alert('Gider kalemi seç.');if(!(amount>0))return alert('Geçerli bir tutar gir.');
   let pm=document.querySelector('input[name="expensePaymentMethod"]:checked')?.value||'Nakit';
-  let arr=getExpenses();
-  arr.push({id:crypto.randomUUID(),date,category,amount,payment_method:pm,note:$('expenseNote').value.trim()});
-  saveExpenses(arr);
-  let [y,m]=date.split('-').map(Number); openExpenses(y,m-1);
+  let {data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  let row={id:crypto.randomUUID(),owner_id:user.id,expense_date:date,category,amount,payment_method:pm,note:$('expenseNote').value.trim()||null};
+  let {data,error}=await sb.from('expenses').insert(row).select('*').single();
+  if(error)return alert('Gider kaydedilemedi: '+error.message);
+  db.expenses=[row,...db.expenses];openExpenses(...date.split('-').map(Number).map((v,i)=>i===1?v-1:v));
 }
-function deleteExpense(id,year,month){
-  let arr=getExpenses(),x=arr.find(v=>v.id===id);if(!x)return;
+async function deleteExpense(id,year,month){
   if(!confirm('Bu gider kaydı silinsin mi?'))return;
-  saveExpenses(arr.filter(v=>v.id!==id));openExpenses(year,month);
+  let {error}=await sb.from('expenses').delete().eq('id',id);
+  if(error)return alert('Gider silinemedi: '+error.message);
+  db.expenses=db.expenses.filter(x=>x.id!==id);openExpenses(year,month);
 }
 
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Bu cihaz ve diğer telefonlar aynı Cabi Pet Kuaför hesabıyla giriş yaptığında müşteriler ve randevular ortak kullanılır.</p></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="openExpenseCategories()">💸 Gider Kalemleri</button><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
 async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',payload={...db,expenses:getExpenses(),expense_categories:getExpenseCategories()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),payment_method:x.payment_method||null,note:x.note||null,status:x.status||'Bekliyor'})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;if(Array.isArray(data.expenses))saveExpenses(data.expenses);if(Array.isArray(data.expense_categories)&&data.expense_categories.length)saveExpenseCategories(data.expense_categories);await loadAll();alert("Yedek başarıyla Supabase'e yüklendi. Giderler de bu cihazda geri yüklendi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
+async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),payment_method:x.payment_method||null,note:x.note||null,status:x.status||'Bekliyor'})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;if(Array.isArray(data.expenses)&&data.expenses.length){
+  let expenses=data.expenses.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,expense_date:x.expense_date||x.date,category:x.category||'Diğer',amount:Number(x.amount||0),payment_method:x.payment_method||'Nakit',note:x.note||null})).filter(x=>x.expense_date&&x.amount>0);
+  let {error:ee}=await sb.from('expenses').upsert(expenses,{onConflict:'id'});if(ee)throw ee;
+}
+if(Array.isArray(data.expense_categories)&&data.expense_categories.length){
+  let categories=data.expense_categories.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,name:String(x.name||x).trim()})).filter(x=>x.name);
+  let {error:ec}=await sb.from('expense_categories').upsert(categories,{onConflict:'id'});if(ec)throw ec;
+}
+await loadAll();alert("Yedek başarıyla Supabase'e yüklendi. Giderler ve gider kalemleri tüm cihazlara senkronize edildi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
 function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 function closeModal(){$('modalTitle').style.color='';$('modal').style.display='none'}
 start();
