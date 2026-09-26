@@ -603,10 +603,26 @@ function refreshBreedSelect(id,typeId){const s=$(id),type=$(typeId);if(!s||!type
 function openCustomer(prefillFromSearch=false){let prefill=prefillFromSearch?String($('search')?.value||'').trim():'';$('modalTitle').textContent='Yeni Müşteri';$('modalBody').innerHTML=`<label>Sahip adı</label><input id="cname" placeholder="Ad Soyad"><label>Telefon</label><input id="phone" type="tel" placeholder="05xx xxx xx xx"><label>Hayvan adı</label><input id="pet" placeholder="Boncuk"><label>Tür</label><select id="type" onchange="refreshBreedSelect('breed','type')"><option>Köpek</option><option>Kedi</option></select><label>Irk</label>${breedSelect('breed','Köpek','')}<label>Kilo (kg)</label><input id="weight" type="number" step=".1"><label>Özel not</label><textarea id="note" placeholder="Kesim şekli, davranış, özel istek..."></textarea><button class="btn primary" onclick="addCustomer()">Kaydet</button>`;$('modal').style.display='flex';if(prefill){const hasLetter=/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(prefill);if(!hasLetter && /\d/.test(prefill)){$('phone').value=prefill;$('phone').focus()}else{$('cname').value=prefill;$('cname').focus()}}}
 function normalizePhone(v){let s=String(v||'').replace(/\D/g,'');if(s.startsWith('90')&&s.length===12)s='0'+s.slice(2);else if(s.length===10)s='0'+s;else s=s.replace(/^0+/,'0');return s;}
 function duplicateCustomer(owner,phone,pet){
-  let p=normalizePhone(phone),o=trSearch(owner),pn=trSearch(pet);
-  return db.customers.find(x=>!x.deleted_at&&((p&&normalizePhone(x.phone)===p)||(o&&pn&&trSearch(x.owner_name)===o&&trSearch(x.pet_name)===pn)))||null;
+  // Mükerrer kontrolünde tek kriter telefon numarasıdır.
+  // Aynı isim/hayvan olsa bile telefon farklıysa yeni müşteri açılabilir.
+  const p=normalizePhone(phone);
+  return p ? (db.customers.find(x=>!x.deleted_at&&normalizePhone(x.phone)===p)||null) : null;
 }
-async function addCustomer(){if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');let dup=duplicateCustomer($('cname').value,$('phone').value,$('pet').value);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;let{data:{user}}=await sb.auth.getUser();let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:getBreed('breed'),weight:$('weight').value?Number($('weight').value):null,note:$('note').value});if(error)return alert(error.message);closeModal();await loadAll()}
+function duplicatePhoneCustomer(phone){
+  const p=normalizePhone(phone);
+  return p ? (db.customers.find(x=>!x.deleted_at&&normalizePhone(x.phone)===p)||null) : null;
+}
+function duplicateCustomerMessage(dup){
+  return '⚠️ Mükerrer müşteri kaydı oluşturulmadı.\n\nBu telefon numarası zaten kayıtlı:\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nLütfen mevcut müşteriyi seçin veya mevcut kaydı güncelleyin.';
+}
+async function addCustomer(){
+  if(!$('cname').value||!$('pet').value)return alert('Sahip adı ve hayvan adı gerekli.');
+  let dup=duplicateCustomer($('cname').value,$('phone').value,$('pet').value);
+  if(dup){ alert(duplicateCustomerMessage(dup)); return; }
+  let{data:{user}}=await sb.auth.getUser();
+  let{error}=await sb.from('customers').insert({owner_id:user.id,owner_name:$('cname').value,phone:$('phone').value,pet_name:$('pet').value,pet_type:$('type').value,breed:getBreed('breed'),weight:$('weight').value?Number($('weight').value):null,note:$('note').value});
+  if(error)return alert(error.message);closeModal();await loadAll();
+}
 function statusClass(s){return 'status-'+String(s||'Bekliyor').toLowerCase().replace('ı','i').replace('ş','s').replace('ü','u').replace('ö','o').replace('ğ','g').replace('ç','c').replaceAll(' ','')}
 function statusLabel(s){return s||'Bekliyor'}
 function apptStatusOptions(selected){return ['Bekliyor','Geldi','Gelmedi','İptal'].map(x=>`<option ${x===selected?'selected':''}>${x}</option>`).join('')}
@@ -720,7 +736,11 @@ async function addAppt(){
   if(!cid){
     let owner=$('newOwner')?.value.trim(),phone=$('newPhone')?.value.trim(),pet=$('newPet')?.value.trim(),type=$('newType')?.value,breed=getBreed('newBreed'),weight=$('newWeight')?.value,note=$('newNote')?.value.trim();
     if(!owner||!pet)return alert('Yeni müşteri için sahip adı ve hayvan adı gerekli.');
-    let dup=duplicateCustomer(owner,phone,pet);if(dup&&!confirm('⚠️ Bu müşteri zaten kayıtlı.\n\nSahip: '+(dup.owner_name||'')+'\nHayvan: '+(dup.pet_name||'')+'\nTelefon: '+(dup.phone||'')+'\n\nYine de yeni kayıt oluşturulsun mu?'))return;
+    let dup=duplicateCustomer(owner,phone,pet);
+    if(dup){
+      alert(duplicateCustomerMessage(dup));
+      return;
+    }
     let{data:c,error:ce}=await sb.from('customers').insert({owner_id:user.id,owner_name:owner,phone,pet_name:pet,pet_type:type,breed,weight:weight?Number(weight):null,note}).select().single();
     if(ce)return alert(ce.message);cid=c.id;
   }
