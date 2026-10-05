@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
+<!-- V111: Kayıp müşteri süresi 6 aya güncellendi -->
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <!-- V67: Ödeme seçenekleri kompakt -->
-<title>Cabi Pet Kuaför – V110</title>
+<title>Cabi Pet Kuaför – V111</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* V91: Arama girdisi harf/sayı ayrımı ile doğru müşteri alanına aktarılır. */
@@ -1044,12 +1045,12 @@ function lostInfo(customerId){
   let type=String(c.pet_type||'').trim().toLowerCase();
   let cat=type==='kedi';
   let threshold;
-  if(h.length===1){threshold=12;}
+  if(h.length===1){threshold=6;}
   else{
     let intervals=[];
     for(let i=1;i<h.length;i++) intervals.push(monthsBetween(new Date(h[i-1].appointment_date+'T12:00:00'),new Date(h[i].appointment_date+'T12:00:00')));
     let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;
-    threshold=Math.max(avg*2,12);
+    threshold=Math.max(avg*2,6);
   }
   return {c,h,last,months,threshold};
 }
@@ -1059,7 +1060,7 @@ function getLostCustomers(){
 function openLostCustomers(){
   let lost=getLostCustomers();
   $('modalTitle').textContent='🔴 Kayıp Müşteriler';
-  let intro='<div class="card"><b>Nasıl hesaplanıyor?</b><div class="muted" style="margin-top:6px;font-size:13px">Müşterinin sadece “Geldi” kayıtları dikkate alınır. Birden fazla geliş varsa kendi ortalama geliş aralığının 2 katı esas alınır; ancak süre 12 aydan kısa olamaz. Tek gelişte ise 12 ay sınırı uygulanır.</div></div>';
+  let intro='<div class="card"><b>Nasıl hesaplanıyor?</b><div class="muted" style="margin-top:6px;font-size:13px">Müşterinin sadece “Geldi” kayıtları dikkate alınır. Birden fazla geliş varsa kendi ortalama geliş aralığının 2 katı esas alınır; ancak süre 6 aydan kısa olamaz. Tek gelişte ise 6 ay sınırı uygulanır.</div></div>';
   let html=lost.length?lost.map(x=>{
     let c=x.c,type=String(c.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek';
     let lastText=x.last.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
