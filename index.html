@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#15947f">
 <!-- V118: Borçlu tahsilatlarının çift ciro yazmasını önle -->\n<!-- V120: Ciro ekranı ReferenceError ve borç tahsilatı/ödeme yöntemi tutarlılığı düzeltmesi -->
 <!-- V121: Borçlu ödeme yöntemi normalizasyonu ve ciro tutarlılığı -->
+<!-- V122: Aynı randevuya bağlı eski tahsilat satırlarının çift sayımı engellenir -->
 <!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
 <!-- V111: Kayıp müşteri süresi 6 aya güncellendi -->
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
@@ -539,11 +540,19 @@ function shouldCountPaidPending(p){
   if(!p || p.status!=='paid' || !p.paid_date) return false;
   if(p.appointment_id){
     const a=(db.appointments||[]).find(x=>x.id===p.appointment_id);
-    // Randevu artık Nakit/Kart ise gelir randevu ücretinden sayılır; eski tahsilat geçmişi ikinci kez ciroya eklenmez.
+    // Tahsilat yalnızca randevu halen Borçlu ise sayılır; Nakit/Kart randevusunun eski tahsilat geçmişi ciroya eklenmez.
     if(!a || !isDebtPayment(a.payment_method)) return false;
-    // Aynı randevuda halen açık borç varsa eski tahsilat bu yeni borcu kapatmış sayılmaz.
-    const hasCurrentUnpaid=(db.pending_payments||[]).some(x=>x.appointment_id===p.appointment_id && x.status!=='paid');
-    return !hasCurrentUnpaid;
+    // Aynı randevu için birden fazla eski/yeni borç satırı kalmış olabilir.
+    // Yalnızca en son oluşturulan satır geçerli kabul edilir; eski tahsilatlar yeniden sayılmaz.
+    const linked=(db.pending_payments||[]).filter(x=>x.appointment_id===p.appointment_id);
+    const latest=linked.reduce((best,x)=>{
+      const xt=String(x.created_at||x.paid_date||x.service_date||'')+'|'+String(x.id||'');
+      const bt=best?String(best.created_at||best.paid_date||best.service_date||'')+'|'+String(best.id||''):'';
+      return !best||xt>bt?x:best;
+    },null);
+    if(!latest || latest.id!==p.id) return false;
+    // En güncel satır halen bekliyorsa eski tahsil edilmiş satır sayılmaz.
+    return latest.status==='paid' && !!latest.paid_date;
   }
   // Randevuya bağlanmamış borç, aynı müşteri/tarih/tutarda Nakit/Kart randevu geliriyle çakışıyorsa tekrar sayılmaz.
   const duplicateAppointment=(db.appointments||[]).some(a=>
