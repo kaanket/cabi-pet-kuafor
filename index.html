@@ -469,7 +469,7 @@ input:focus,select:focus,textarea:focus{
 const SUPABASE_URL='https://ibypczlxqhrrownltryc.supabase.co';
 const SUPABASE_KEY='sb_publishable_zh2dVONzQFc2hTpAfCKuXg_hnfSOsTo';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let db={customers:[],appointments:[],sales:[],expenses:[],expense_categories:[]},channel=null,syncTimer=null;
+let db={customers:[],appointments:[],sales:[],expenses:[],expense_categories:[],pending_payments:[]},channel=null,syncTimer=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
 function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
@@ -500,6 +500,8 @@ async function loadAll(){
   let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});
   db.sales=s.error?[]:(s.data||[]);
   await loadExpensesCloud(user.id);
+  let pp=await sb.from('pending_payments').select('*').order('created_at',{ascending:false});
+  if(pp.error){console.warn('Bekleyen ödemeler yüklenemedi:',pp.error.message);db.pending_payments=db.pending_payments||[]}else db.pending_payments=pp.data||[];
   render();
 }
 function subscribe(){
@@ -510,6 +512,7 @@ function subscribe(){
     .on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll())
     .on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>loadAll())
     .on('postgres_changes',{event:'*',schema:'public',table:'expense_categories'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'pending_payments'},()=>loadAll())
     .subscribe()
 }
 function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
@@ -1262,6 +1265,32 @@ async function deleteExpense(id,year,month){
   db.expenses=db.expenses.filter(x=>x.id!==id);openExpenses(year,month);
 }
 
+function openPendingPayments(){
+  const list=(db.pending_payments||[]).slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  const customers=db.customers.filter(c=>!c.deleted_at).sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr'));
+  $('modalTitle').textContent='🧾 Bekleyen Ödemeler';
+  $('modalBody').innerHTML=`<div class="card"><b>Yeni borç ekle</b><label>Müşteri</label><select id="pendingCustomer"><option value="">Müşteri seçin</option>${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.owner_name||'')} · ${esc(c.pet_name||'')} · ${esc(c.phone||'')}</option>`).join('')}</select><label>Tutar (₺)</label><input id="pendingAmount" type="number" min="0.01" step="0.01" placeholder="Tutarı elle girin"><label>Not (isteğe bağlı)</label><input id="pendingNote" placeholder="Örn. tıraş ücreti"><button class="btn primary" style="width:100%" onclick="addPendingPayment()">＋ Borcu Kaydet</button></div>`+
+  `<h3>Ödeme listesi</h3>`+(list.length?list.map(p=>{let c=customers.find(x=>x.id===p.customer_id)||db.customers.find(x=>x.id===p.customer_id)||{};let paid=p.status==='paid';return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>${esc(c.owner_name||'Müşteri')}</b><div class="muted">🐾 ${esc(c.pet_name||'')} · ${esc(c.phone||'')}</div>${p.note?`<div class="muted">${esc(p.note)}</div>`:''}<small class="muted">${paid?'Tahsil tarihi: '+esc(p.paid_at||p.collected_at||'—'):'Bekliyor'}</small></div><b>${money(p.amount)}</b></div>${paid?'<div class="tag" style="display:inline-block;margin-top:8px">✓ Tahsil edildi</div>':`<button class="btn primary" style="width:100%;margin-top:10px" onclick="collectPendingPayment('${esc(p.id)}')">✓ Tahsil Edildi</button>`}</div>`}).join(''):'<div class="empty">Henüz bekleyen ödeme yok.</div>')+`<button class="btn" style="width:100%;margin-top:10px" onclick="closeModal()">Kapat</button>`;
+  $('modal').style.display='flex';
+}
+async function addPendingPayment(){
+  const customer_id=$('pendingCustomer')?.value,amount=Number($('pendingAmount')?.value),note=String($('pendingNote')?.value||'').trim();
+  if(!customer_id)return alert('Lütfen müşteri seç.');if(!Number.isFinite(amount)||amount<=0)return alert('Geçerli bir tutar gir.');
+  const {data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  const row={owner_id:user.id,customer_id,amount,status:'pending',note:note||null};
+  const {data,error}=await sb.from('pending_payments').insert(row).select('*').single();
+  if(error)return alert('Borç kaydedilemedi: '+error.message);
+  db.pending_payments=[data,...(db.pending_payments||[])];openPendingPayments();
+}
+async function collectPendingPayment(id){
+  const p=(db.pending_payments||[]).find(x=>x.id===id);if(!p||p.status==='paid')return;
+  if(!confirm(money(p.amount)+' tahsil edildi olarak işaretlensin mi? Tutar yalnızca tahsil edildiği ayın cirosuna eklenecek.'))return;
+  const paid_at=localDateStr(0);const {data,error}=await sb.from('pending_payments').update({status:'paid',paid_at}).eq('id',id).eq('status','pending').select('*').maybeSingle();
+  if(error)return alert('Tahsilat kaydedilemedi: '+error.message);
+  if(!data){await loadAll();return alert('Bu ödeme daha önce tahsil edilmiş olabilir. Liste yenilendi.');}
+  db.pending_payments=(db.pending_payments||[]).map(x=>x.id===id?data:x);openPendingPayments();
+}
+
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Müşteriler, randevular, satışlar ve giderler Supabase'de saklanır. Aynı Cabi hesabıyla giriş yapılan tüm cihazlarda görünür. Cihazlar ayrıca düzenli olarak yenilenir.</p></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="openExpenseCategories()">💸 Gider Kalemleri</button><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
 async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',payload={...db,expenses:getExpenses(),expense_categories:getExpenseCategories()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),payment_method:x.payment_method||null,note:x.note||null,status:x.status||'Bekliyor'})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;if(Array.isArray(data.expenses)&&data.expenses.length){
@@ -1287,7 +1316,8 @@ function monthlyRevenue(offset=0){
     let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
-    let total=serviceTotal+salesTotal, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
+    let pendingCollected=(db.pending_payments||[]).filter(p=>p.status==='paid'&&String(p.paid_at||p.collected_at||'').startsWith(year+'-'+String(m+1).padStart(2,'0'))).reduce((n,p)=>n+(Number(p.amount)||0),0);
+    let total=serviceTotal+salesTotal+pendingCollected, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
     let expenseTotal=monthExpenses.reduce((n,x)=>n+(Number(x.amount)||0),0), net=total-expenseTotal;
     let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((n,x)=>n+(Number(x.price)||0),0);
     let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Kart').reduce((n,x)=>n+(Number(x.price)||0),0);
@@ -1296,7 +1326,7 @@ function monthlyRevenue(offset=0){
     let dogRevenue=revenueAppts.filter(a=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).reduce((n,a)=>n+(Number(a.price)||0),0);
     let cats=revenueAppts.filter(a=>String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR')==='kedi').length;
     let dogs=revenueAppts.filter(a=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).length;
-    rows.push({month:months[m],total,serviceTotal,salesTotal,catRevenue,dogRevenue,expenseTotal,net,count:revenueAppts.length+sales.length,days,cats,dogs,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length,salesCount:sales.length});
+    rows.push({month:months[m],total,serviceTotal,salesTotal,pendingCollected,catRevenue,dogRevenue,expenseTotal,net,count:revenueAppts.length+sales.length,days,cats,dogs,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length,salesCount:sales.length});
     annualTotal+=total;annualExpenses+=expenseTotal;annualApptCount+=revenueAppts.length;annualSaleCount+=sales.length;annualCashTotal+=cashTotal;annualCardTotal+=cardTotal;
   }
   let annualNet=annualTotal-annualExpenses, annualServiceTotal=rows.reduce((n,r)=>n+r.serviceTotal,0), annualSalesTotal=rows.reduce((n,r)=>n+r.salesTotal,0);
@@ -1307,6 +1337,7 @@ function monthlyRevenue(offset=0){
     '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">'+
       '<div class="card"><small>💰 Yıllık Ciro</small><h2>'+money(annualTotal)+'</h2></div>'+ '<div class="card"><small>🔴 Yıllık Gider</small><h2>'+money(annualExpenses)+'</h2></div>'+ '<div class="card"><small>🟢 Yıllık Net</small><h2 style="margin:5px 0">'+money(annualNet)+'</h2><div class="muted">Ciro − Gider</div></div>'+ '<div class="card"><small>🏆 En Yüksek Ciro Ayı</small><h2 style="margin:5px 0;color:#c62828">'+(annualTotal>0?best.month:'Henüz ciro yok')+'</h2><div class="muted">'+(annualTotal>0?money(best.total)+' ciro':'Bu yıl henüz ciro kaydı bulunmuyor.')+'</div></div>'+ '<div class="card"><small>✂️ Hizmet</small><h3>'+money(annualServiceTotal)+'</h3></div>'+ '<div class="card"><small>🛍️ Satış</small><h3>'+money(annualSalesTotal)+'</h3></div>'+ '<div class="card"><small>💵 Nakit</small><h3>'+money(annualCashTotal)+'</h3></div>'+ '<div class="card"><small>💳 Kart</small><h3>'+money(annualCardTotal)+'</h3></div>'+ '<div class="card"><small>Randevu</small><h2>'+annualApptCount+'</h2></div>'+ '<div class="card"><small>Satış adedi</small><h2>'+annualSaleCount+'</h2></div>'+ '<div class="card" style="grid-column:1/-1"><small>🐾 Yıllık hayvan sayısı</small><h3 style="margin-bottom:0">🐱 '+annualCats+' kedi · 🐶 '+annualDogs+' köpek</h3></div>'+ '</div>'+
     '<div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" style="flex:1" onclick="openExpenses()">💸 Giderler</button><button class="btn" style="flex:1" onclick="openExpenseCategories()">⚙️ Gider Kalemleri</button></div>'+
+    '<button class="btn" style="width:100%;margin-top:8px" onclick="openPendingPayments()">🧾 Bekleyen Ödemeler</button>'+
     '<h3 style="margin:18px 0 10px">📊 Ay Ay Ciro / Gider / Net</h3>';
   rows.forEach((r,i)=>{let current=year===nowYear&&i===nowMonth,pct=annualTotal?r.total/annualTotal*100:0,bar=r.total/maxMonth*100;html+='<div class="card" style="margin-top:8px;'+(current?'border:2px solid #159b89;':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>'+r.month+(current?' <span style="font-size:11px;color:#159b89">(Bu ay)</span>':'')+'</b><div class="muted"><span style="color:#c62828;font-weight:800">Ciro '+money(r.total)+'</span> · Gider '+money(r.expenseTotal)+'</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:11px"><span>🐱 Kedi '+money(r.catRevenue)+'</span><span>🐶 Köpek '+money(r.dogRevenue)+'</span><span>🛍️ Satış '+money(r.salesTotal)+'</span></div></div><div style="text-align:right;line-height:1.05"><div style="font-size:11px;font-weight:800;color:#c62828;margin-bottom:3px">KAR</div><b style="font-size:18px;white-space:nowrap;color:#c62828">'+money(r.net)+'</b></div></div><div style="height:7px;background:#edf1f1;border-radius:8px;margin-top:9px;overflow:hidden"><div style="height:100%;width:'+bar+'%;background:#159b89;border-radius:8px"></div></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px"><span class="muted">'+pct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'% yıllık ciro</span><span class="muted">🐱 '+r.cats+' kedi · 🐶 '+r.dogs+' köpek · '+r.days+' aktif gün</span></div><button class="btn" style="width:100%;margin-top:9px;padding:9px" onclick="openExpenses('+year+','+i+')">💸 '+r.month+' Giderleri</button></div>';});
   let weekdayNames=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
