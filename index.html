@@ -537,7 +537,7 @@ function updateHomeSummary(){
   let today=db.appointments.filter(a=>a.appointment_date===d);
   let valid=today.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
   let linkedIds=pendingLinkedAppointmentIds();
-  let revenueAppts=valid.filter(a=>!linkedIds.has(a.id)).reduce((s,a)=>s+(Number(a.price)||0),0);
+  let revenueAppts=valid.filter(a=>a.payment_method!=='Borçlu'&&!linkedIds.has(a.id)).reduce((s,a)=>s+(Number(a.price)||0),0);
   let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
   let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
   let collections=(db.pending_payments||[]).filter(p=>p.status==='paid'&&p.paid_date===d).reduce((s,p)=>s+(Number(p.amount)||0),0);
@@ -1322,7 +1322,7 @@ function monthlyRevenue(offset=0){
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date&&a.appointment_date.startsWith(prefix));
-    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0)&&!linkedPendingAppts.has(a.id));
+    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0)&&a.payment_method!=='Borçlu'&&!linkedPendingAppts.has(a.id));
     let paidThisMonth=paidPending.filter(p=>p.paid_date.startsWith(prefix));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.reduce((n,p)=>n+(Number(p.amount)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
