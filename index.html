@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
-<!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
+<!-- V118: Borçlu tahsilatlarının çift ciro yazmasını önle -->\n<!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
 <!-- V111: Kayıp müşteri süresi 6 aya güncellendi -->
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <!-- V67: Ödeme seçenekleri kompakt -->
-<title>Cabi Pet Kuaför – V114</title>
+<title>Cabi Pet Kuaför – V118</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* V91: Arama girdisi harf/sayı ayrımı ile doğru müşteri alanına aktarılır. */
@@ -532,6 +532,22 @@ function trSearch(v){
     .trim();
 }
 
+function shouldCountPaidPending(p){
+  if(p.status!=='paid'||!p.paid_date)return false;
+  if(p.appointment_id){
+    const a=db.appointments.find(x=>x.id===p.appointment_id);
+    return !!a && a.payment_method==='Borçlu';
+  }
+  // Eski/manuel kayıtlarda randevu bağlantısı yoksa, aynı müşteri-tarih-tutar
+  // için artık Borçlu olmayan bir randevu varsa tahsilatı ikinci kez sayma.
+  const duplicateAppointment=db.appointments.some(a=>
+    a.customer_id===p.customer_id &&
+    a.appointment_date===(p.service_date||'') &&
+    Number(a.price||0)===Number(p.amount||0) &&
+    a.payment_method!=='Borçlu'
+  );
+  return !duplicateAppointment;
+}
 function updateHomeSummary(){
   let d=localDateStr(0);
   let today=db.appointments.filter(a=>a.appointment_date===d);
@@ -539,7 +555,7 @@ function updateHomeSummary(){
   let revenueAppts=valid.filter(a=>a.payment_method!=='Borçlu').reduce((s,a)=>s+(Number(a.price)||0),0);
   let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
   let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
-  let collections=(db.pending_payments||[]).filter(p=>p.status==='paid'&&p.paid_date===d&&(!p.appointment_id||db.appointments.some(a=>a.id===p.appointment_id&&a.payment_method==='Borçlu'))).reduce((s,p)=>s+(Number(p.amount)||0),0);
+  let collections=(db.pending_payments||[]).filter(p=>p.paid_date===d&&shouldCountPaidPending(p)).reduce((s,p)=>s+(Number(p.amount)||0),0);
   let revenue=revenueAppts+revenueSales+collections;
   let dateObj=new Date(d+'T12:00:00');
   let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -1317,7 +1333,7 @@ function monthlyRevenue(offset=0){
   let base=new Date(), year=base.getFullYear()+offset, nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let expenses=getExpenses(), rows=[], annualTotal=0, annualExpenses=0, annualApptCount=0, annualSaleCount=0, annualCashTotal=0, annualCardTotal=0;
-  let paidPending=db.pending_payments.filter(p=>p.status==='paid'&&p.paid_date&&(!p.appointment_id||db.appointments.some(a=>a.id===p.appointment_id&&a.payment_method==='Borçlu')));
+  let paidPending=db.pending_payments.filter(shouldCountPaidPending);
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date&&a.appointment_date.startsWith(prefix));
