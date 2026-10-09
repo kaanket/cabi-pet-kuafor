@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
-<!-- V118: Borçlu tahsilatlarının çift ciro yazmasını önle -->\n<!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
+<!-- V118: Borçlu tahsilatlarının çift ciro yazmasını önle -->\n<!-- V120: Ciro ekranı ReferenceError ve borç tahsilatı/ödeme yöntemi tutarlılığı düzeltmesi -->
+<!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
 <!-- V111: Kayıp müşteri süresi 6 aya güncellendi -->
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
@@ -536,11 +537,13 @@ function shouldCountPaidPending(p){
   if(!p || p.status!=='paid' || !p.paid_date) return false;
   if(p.appointment_id){
     const a=(db.appointments||[]).find(x=>x.id===p.appointment_id);
+    // Randevu artık Nakit/Kart ise gelir randevu ücretinden sayılır; eski tahsilat geçmişi ikinci kez ciroya eklenmez.
     if(!a || a.payment_method!=='Borçlu') return false;
-    // Borç yeniden açıldıysa eski tahsilat geçmişte kalsın; yeni borç tahsil edilene kadar ciroya girmez.
+    // Aynı randevuda halen açık borç varsa eski tahsilat bu yeni borcu kapatmış sayılmaz.
     const hasCurrentUnpaid=(db.pending_payments||[]).some(x=>x.appointment_id===p.appointment_id && x.status!=='paid');
     return !hasCurrentUnpaid;
   }
+  // Randevuya bağlanmamış borç, aynı müşteri/tarih/tutarda Nakit/Kart randevu geliriyle çakışıyorsa tekrar sayılmaz.
   const duplicateAppointment=(db.appointments||[]).some(a=>
     a.customer_id===p.customer_id &&
     a.appointment_date===(p.service_date||'') &&
@@ -1390,7 +1393,7 @@ function monthlyRevenue(offset=0){
   '</div>';
 
   let petTypeRevenue={kedi:0,kopek:0};
-  db.appointments.forEach(a=>{if(!a.appointment_date||!a.appointment_date.startsWith(year+'-')||(a.status||'Bekliyor')!=='Geldi'||linkedPendingAppts.has(a.id))return;let c=db.customers.find(x=>x.id===a.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(a.price)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(a.price)||0;});
+  db.appointments.forEach(a=>{if(!a.appointment_date||!a.appointment_date.startsWith(year+'-')||(a.status||'Bekliyor')!=='Geldi'||a.payment_method==='Borçlu')return;let c=db.customers.find(x=>x.id===a.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(a.price)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(a.price)||0;});
   paidPending.filter(p=>p.paid_date&&p.paid_date.startsWith(year+'-')).forEach(p=>{let c=db.customers.find(x=>x.id===p.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(p.amount)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(p.amount)||0;});
   let animalTotal=petTypeRevenue.kedi+petTypeRevenue.kopek,catPct=animalTotal?petTypeRevenue.kedi/animalTotal*100:0,dogPct=animalTotal?petTypeRevenue.kopek/animalTotal*100:0;
   html+='<h3 style="margin:18px 0 10px">🐾 Hayvan Türüne Göre Ciro</h3><div class="card" style="padding:14px"><div style="display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid #eee"><span>🐱 Kedi <small class="muted">('+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+money(petTypeRevenue.kedi)+'</b></div><div style="display:flex;justify-content:space-between;padding:10px 2px"><span>🐶 Köpek <small class="muted">('+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+money(petTypeRevenue.kopek)+'</b></div></div>';
