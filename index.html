@@ -1300,7 +1300,7 @@ async function deletePendingPayment(id){
 async function collectPendingPayment(id){
   const p=(db.pending_payments||[]).find(x=>x.id===id);if(!p||p.status==='paid')return;
   if(!confirm(money(p.amount)+' tahsil edildi olarak işaretlensin mi? Tutar yalnızca tahsil edildiği ayın cirosuna eklenecek.'))return;
-  const paid_at=localDateStr(0);const {data,error}=await sb.from('pending_payments').update({status:'paid',paid_at}).eq('id',id).eq('status','pending').select('*').maybeSingle();
+  const paid_date=localDateStr(0);const {data,error}=await sb.from('pending_payments').update({status:'paid',paid_date}).eq('id',id).eq('status','pending').select('*').maybeSingle();
   if(error)return alert('Tahsilat kaydedilemedi: '+error.message);
   if(!data){await loadAll();return alert('Bu ödeme daha önce tahsil edilmiş olabilir. Liste yenilendi.');}
   db.pending_payments=(db.pending_payments||[]).map(x=>x.id===id?data:x);openPendingPayments();
@@ -1331,7 +1331,7 @@ function monthlyRevenue(offset=0){
     let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
-    let pendingCollected=(db.pending_payments||[]).filter(p=>p.status==='paid'&&String(p.paid_at||p.collected_at||'').startsWith(year+'-'+String(m+1).padStart(2,'0'))).reduce((n,p)=>n+(Number(p.amount)||0),0);
+    let pendingCollected=(db.pending_payments||[]).filter(p=>p.status==='paid'&&String(p.paid_date||p.paid_at||p.collected_at||'').startsWith(year+'-'+String(m+1).padStart(2,'0'))).reduce((n,p)=>n+(Number(p.amount)||0),0);
     let total=serviceTotal+salesTotal+pendingCollected, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
     let expenseTotal=monthExpenses.reduce((n,x)=>n+(Number(x.amount)||0),0), net=total-expenseTotal;
     let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((n,x)=>n+(Number(x.price)||0),0);
