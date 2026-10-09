@@ -427,6 +427,7 @@ input:focus,select:focus,textarea:focus{
   <button onclick="openSales()"><span>🛍️</span> Satış</button>
   <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
   <button onclick="openLostCustomers()"><span>🔴</span> Kayıp Müşteriler</button>
+  <button onclick="openPendingPayments()"><span>🧾</span> Bekleyen Ödemeler</button>
 </div>
 <div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
 <div id="appointments" class="card"></div>
@@ -1270,7 +1271,7 @@ function openPendingPayments(){
   const customers=db.customers.filter(c=>!c.deleted_at).sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr'));
   $('modalTitle').textContent='🧾 Bekleyen Ödemeler';
   $('modalBody').innerHTML=`<div class="card"><b>Yeni borç ekle</b><label>Müşteri</label><select id="pendingCustomer"><option value="">Müşteri seçin</option>${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.owner_name||'')} · ${esc(c.pet_name||'')} · ${esc(c.phone||'')}</option>`).join('')}</select><label>Tutar (₺)</label><input id="pendingAmount" type="number" min="0.01" step="0.01" placeholder="Tutarı elle girin"><label>Not (isteğe bağlı)</label><input id="pendingNote" placeholder="Örn. tıraş ücreti"><button class="btn primary" style="width:100%" onclick="addPendingPayment()">＋ Borcu Kaydet</button></div>`+
-  `<h3>Ödeme listesi</h3>`+(list.length?list.map(p=>{let c=customers.find(x=>x.id===p.customer_id)||db.customers.find(x=>x.id===p.customer_id)||{};let paid=p.status==='paid';return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>${esc(c.owner_name||'Müşteri')}</b><div class="muted">🐾 ${esc(c.pet_name||'')} · ${esc(c.phone||'')}</div>${p.note?`<div class="muted">${esc(p.note)}</div>`:''}<small class="muted">${paid?'Tahsil tarihi: '+esc(p.paid_at||p.collected_at||'—'):'Bekliyor'}</small></div><b>${money(p.amount)}</b></div>${paid?'<div class="tag" style="display:inline-block;margin-top:8px">✓ Tahsil edildi</div>':`<button class="btn primary" style="width:100%;margin-top:10px" onclick="collectPendingPayment('${esc(p.id)}')">✓ Tahsil Edildi</button>`}</div>`}).join(''):'<div class="empty">Henüz bekleyen ödeme yok.</div>')+`<button class="btn" style="width:100%;margin-top:10px" onclick="closeModal()">Kapat</button>`;
+  `<h3>Ödeme listesi</h3>`+(list.length?list.map(p=>{let c=customers.find(x=>x.id===p.customer_id)||db.customers.find(x=>x.id===p.customer_id)||{};let paid=p.status==='paid';return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>${esc(c.owner_name||'Müşteri')}</b><div class="muted">🐾 ${esc(c.pet_name||'')} · ${esc(c.phone||'')}</div>${p.note?`<div class="muted">${esc(p.note)}</div>`:''}<small class="muted">${paid?'Tahsil tarihi: '+esc(p.paid_at||p.collected_at||'—'):'Bekliyor'}</small></div><b>${money(p.amount)}</b></div>${paid?'<div class="tag" style="display:inline-block;margin-top:8px">✓ Tahsil edildi</div>':`<button class="btn primary" style="width:100%;margin-top:10px" onclick="collectPendingPayment('${esc(p.id)}')">✓ Tahsil Edildi</button>`}<button class="btn danger" style="width:100%;margin-top:8px" onclick="deletePendingPayment('${esc(p.id)}')">🗑️ Sil</button></div>`}).join(''):'<div class="empty">Henüz bekleyen ödeme yok.</div>')+`<button class="btn" style="width:100%;margin-top:10px" onclick="closeModal()">Kapat</button>`;
   $('modal').style.display='flex';
 }
 async function addPendingPayment(){
@@ -1281,6 +1282,18 @@ async function addPendingPayment(){
   const {data,error}=await sb.from('pending_payments').insert(row).select('*').single();
   if(error)return alert('Borç kaydedilemedi: '+error.message);
   db.pending_payments=[data,...(db.pending_payments||[])];openPendingPayments();
+}
+async function deletePendingPayment(id){
+  const p=(db.pending_payments||[]).find(x=>x.id===id);if(!p)return;
+  const paid=p.status==='paid';
+  const message=paid
+    ? 'Bu tahsil edilmiş ödeme silinsin mi? Silinirse tahsil edildiği ayın cirosundan da düşer.'
+    : 'Bu bekleyen borç kaydı kalıcı olarak silinsin mi?';
+  if(!confirm(message))return;
+  const {error}=await sb.from('pending_payments').delete().eq('id',id);
+  if(error)return alert('Ödeme kaydı silinemedi: '+error.message);
+  db.pending_payments=(db.pending_payments||[]).filter(x=>x.id!==id);
+  openPendingPayments();
 }
 async function collectPendingPayment(id){
   const p=(db.pending_payments||[]).find(x=>x.id===id);if(!p||p.status==='paid')return;
