@@ -536,32 +536,65 @@ function trSearch(v){
 }
 
 function isDebtPayment(value){const v=String(value??'').trim().toLocaleLowerCase('tr-TR').replace(/ı/g,'i').replace(/ç/g,'c');return v==='borclu'||v==='borçlu'||v==='borc';}
+function latestPendingForAppointment(appointmentId){
+  const linked=(db.pending_payments||[]).filter(p=>p.appointment_id===appointmentId);
+  if(!linked.length)return null;
+  // Yeni açılan borç, zaman damgaları aynı olsa bile eski tahsilat kaydını geçersiz kılar.
+  const open=linked.filter(p=>p.status!=='paid');
+  const pool=open.length?open:linked;
+  return pool.reduce((best,x)=>{
+    const xt=String(x.created_at||'')+'|'+String(x.id||'');
+    const bt=best?String(best.created_at||'')+'|'+String(best.id||''):'';
+    return !best||xt>bt?x:best;
+  },null);
+}
 function shouldCountPaidPending(p){
   if(!p || p.status!=='paid' || !p.paid_date) return false;
   if(p.appointment_id){
     const a=(db.appointments||[]).find(x=>x.id===p.appointment_id);
-    // Tahsilat yalnızca randevu halen Borçlu ise sayılır; Nakit/Kart randevusunun eski tahsilat geçmişi ciroya eklenmez.
-    if(!a || !isDebtPayment(a.payment_method)) return false;
-    // Aynı randevu için birden fazla eski/yeni borç satırı kalmış olabilir.
-    // Yalnızca en son oluşturulan satır geçerli kabul edilir; eski tahsilatlar yeniden sayılmaz.
-    const linked=(db.pending_payments||[]).filter(x=>x.appointment_id===p.appointment_id);
-    const latest=linked.reduce((best,x)=>{
-      const xt=String(x.created_at||x.paid_date||x.service_date||'')+'|'+String(x.id||'');
-      const bt=best?String(best.created_at||best.paid_date||best.service_date||'')+'|'+String(best.id||''):'';
-      return !best||xt>bt?x:best;
-    },null);
-    if(!latest || latest.id!==p.id) return false;
-    // En güncel satır halen bekliyorsa eski tahsil edilmiş satır sayılmaz.
-    return latest.status==='paid' && !!latest.paid_date;
+    if(!a || !isDebtPayment(a.payment_method) || (a.status||'Bekliyor')!=='Geldi') return false;
+    // Bir randevuya bağlı yalnızca en son ödeme satırı geçerlidir. Son satır bekliyorsa eski tahsilat sayılmaz.
+    const latest=latestPendingForAppointment(p.appointment_id);
+    return !!latest && latest.id===p.id && latest.status==='paid' && !!latest.paid_date;
   }
-  // Randevuya bağlanmamış borç, aynı müşteri/tarih/tutarda Nakit/Kart randevu geliriyle çakışıyorsa tekrar sayılmaz.
+  // Bağımsız borç kaydı aynı hizmet için Nakit/Kart randevusuyla çakışıyorsa ikinci kez sayma.
   const duplicateAppointment=(db.appointments||[]).some(a=>
-    a.customer_id===p.customer_id &&
-    a.appointment_date===(p.service_date||'') &&
-    Number(a.price||0)===Number(p.amount||0) &&
-    !isDebtPayment(a.payment_method)
+    a.customer_id===p.customer_id && a.appointment_date===(p.service_date||'') &&
+    Number(a.price||0)===Number(p.amount||0) && !isDebtPayment(a.payment_method) &&
+    (a.status||'Bekliyor')==='Geldi'
   );
   return !duplicateAppointment;
+}
+function countedPaidPending(){
+  const all=(db.pending_payments||[]).filter(shouldCountPaidPending);
+  const latestByAppointment=new Set();
+  return all.filter(p=>{
+    if(!p.appointment_id)return true;
+    if(latestByAppointment.has(p.appointment_id))return false;
+    latestByAppointment.add(p.appointment_id);return true;
+  });
+}
+async function syncAppointmentDebt(appointmentId){
+  const a=(db.appointments||[]).find(x=>x.id===appointmentId);
+  if(!a)return;
+  const linked=(db.pending_payments||[]).filter(p=>p.appointment_id===appointmentId);
+  const open=linked.filter(p=>p.status!=='paid');
+  const shouldBePending=isDebtPayment(a.payment_method)&&(a.status||'Bekliyor')==='Geldi';
+  if(shouldBePending){
+    const keep=open[0];
+    if(keep){
+      const patch={customer_id:a.customer_id,amount:Number(a.price||0),service_date:a.appointment_date,note:a.note||null};
+      const {error}=await sb.from('pending_payments').update(patch).eq('id',keep.id);
+      if(error)throw error;
+      for(const extra of open.slice(1)){const r=await sb.from('pending_payments').delete().eq('id',extra.id);if(r.error)throw r.error;}
+    }else{
+      const {data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');
+      const {error}=await sb.from('pending_payments').insert({owner_id:user.id,customer_id:a.customer_id,appointment_id:a.id,amount:Number(a.price||0),service_date:a.appointment_date,due_date:null,note:a.note||null,status:'pending',payment_method:null,paid_date:null});
+      if(error)throw error;
+    }
+  }else{
+    for(const row of open){const r=await sb.from('pending_payments').delete().eq('id',row.id);if(r.error)throw r.error;}
+  }
 }
 function updateHomeSummary(){
   let d=localDateStr(0);
@@ -570,7 +603,7 @@ function updateHomeSummary(){
   let revenueAppts=valid.filter(a=>!isDebtPayment(a.payment_method)).reduce((s,a)=>s+(Number(a.price)||0),0);
   let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
   let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
-  let collections=(db.pending_payments||[]).filter(p=>p.paid_date===d&&shouldCountPaidPending(p)).reduce((s,p)=>s+(Number(p.amount)||0),0);
+  let collections=countedPaidPending().filter(p=>p.paid_date===d).reduce((s,p)=>s+(Number(p.amount)||0),0);
   let revenue=revenueAppts+revenueSales+collections;
   let dateObj=new Date(d+'T12:00:00');
   let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -789,16 +822,29 @@ async function addAppt(){
   let appt={owner_id:user.id,customer_id:cid,appointment_date:$('date').value,appointment_time:$('time').value,service:$('service').value,price:Number($('price').value||0),payment_method:payment,note:$('anote').value,status:$('status').value};
   let{data:savedAppt,error}=await sb.from('appointments').insert(appt).select('*').single();
   if(error)return alert(error.message);
-  if(payment==='Borçlu'){
+  if(payment==='Borçlu' && (savedAppt.status||'Bekliyor')==='Geldi'){
     let{error:pe}=await sb.from('pending_payments').insert({owner_id:user.id,customer_id:cid,appointment_id:savedAppt.id,amount:Number($('price').value||0),service_date:$('date').value||localDateStr(0),due_date:null,note:$('anote').value.trim()||null,status:'pending',payment_method:null,paid_date:null});
     if(pe){await sb.from('appointments').delete().eq('id',savedAppt.id);return alert('Randevu kaydedilemedi; bekleyen ödeme tablosu izin hatası verdi: '+pe.message+'\nSupabase SQL izinlerini düzeltmek gerekiyor.');}
   }
-  closeModal();await loadAll();showSaveToast();if(payment==='Borçlu')alert('Randevu kaydedildi ve ödeme Bekleyen Ödemeler bölümüne eklendi. Tahsil edilene kadar ciroya eklenmeyecek.')
+  closeModal();await loadAll();showSaveToast();if(payment==='Borçlu' && ($('status')?.value||'Bekliyor')==='Geldi')alert('Randevu kaydedildi ve ödeme Bekleyen Ödemeler bölümüne eklendi. Tahsil edilene kadar ciroya eklenmeyecek.')
 }
 function editAppt(id){let a=db.appointments.find(x=>x.id===id),opts=db.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${esc(x.owner_name)} — ${esc(x.pet_name)}${x.deleted_at?' · Silinmiş müşteri':''}</option>`).join('');let pm=a.payment_method||'';$('modalTitle').textContent='Randevuyu Düzenle';$('modalBody').innerHTML=`<label>Müşteri</label><select id="ecid">${opts}</select><div class="appt-datetime-grid"><div><label>Tarih</label><input id="edate" type="date" value="${a.appointment_date}"></div><div><label>Saat</label><select id="etime">${timeOptions((a.appointment_time||'10:00').slice(0,5))}</select></div></div><label>İşlem</label><select id="eservice"><option ${a.service==='Makina'||a.service==='Tıraş – Makina'?'selected':''}>Makina</option><option ${a.service==='Makas'||a.service==='Tıraş – Makas'?'selected':''}>Makas</option><option ${a.service==='Hijyen & Banyo'?'selected':''}>Hijyen & Banyo</option><option ${a.service==='Tarama & Banyo'?'selected':''}>Tarama & Banyo</option><option ${a.service==='Kıtık açma'?'selected':''}>Kıtık açma</option><option ${a.service==='Tırnak bakım'||a.service==='Tırnak / bakım'?'selected':''}>Tırnak bakım</option><option ${a.service==='Tıraş'?'selected':''}>Tıraş</option></select><label>Ödeme</label><div class="payment-options"><label class="payment-option"><input type="radio" name="editPaymentMethod" value="Nakit" ${pm==='Nakit'?'checked':''}>💵 Nakit</label><label class="payment-option"><input type="radio" name="editPaymentMethod" value="Kart" ${pm==='Kart'?'checked':''}>💳 Kart</label><label class="payment-option"><input type="radio" name="editPaymentMethod" value="Borçlu" ${pm==='Borçlu'?'checked':''}>📒 Borçlu</label></div><label>Ücret</label><input id="eprice" type="number" value="${a.price||0}"><label>Durum</label><select id="estatus">${apptStatusOptions(a.status)}</select><label>Not</label><textarea id="enote">${esc(a.note||'')}</textarea><div class="actions"><button class="btn primary" onclick="updateAppt('${id}')">Kaydet</button><button class="btn danger" onclick="deleteAppt('${id}')">Sil</button><button class="btn" onclick="returnToCalendar('${id}')">← Takvime Dön</button></div>`;$('modal').style.display='flex';$('eservice').value=a.service}
-async function updateAppt(id){let c=db.customers.find(x=>x.id===$('ecid').value);if(!c)return alert('Müşteri seçin.');let conflict=checkConflict($('edate').value,$('etime').value,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}let payment=document.querySelector('input[name=editPaymentMethod]:checked')?.value||null;let savedDate=$('edate').value;let amount=Number($('eprice').value||0);let note=$('enote').value.trim()||null;let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');let linked=(db.pending_payments||[]).filter(p=>p.appointment_id===id);let apptUpdate={customer_id:c.id,appointment_date:savedDate,appointment_time:$('etime').value,service:$('eservice').value,price:amount,payment_method:payment,note,status:$('estatus').value};let{data:updatedAppt,error}=await sb.from('appointments').update(apptUpdate).eq('id',id).select('id,payment_method').single();if(error)return alert('Randevu ödeme yöntemi kaydedilemedi: '+error.message);if(!updatedAppt||String(updatedAppt.payment_method||'')!==String(payment||''))return alert('Ödeme yöntemi veritabanına doğru kaydedilemedi. Lütfen tekrar deneyin.');let pending=linked.find(p=>p.status!=='paid');if(payment==='Borçlu'){if(pending){let{error:pe}=await sb.from('pending_payments').update({customer_id:c.id,amount,service_date:savedDate,note}).eq('id',pending.id);if(pe)return alert('Randevu güncellendi ancak bekleyen ödeme güncellenemedi: '+pe.message);}else{let{error:pe}=await sb.from('pending_payments').insert({owner_id:user.id,customer_id:c.id,appointment_id:id,amount,service_date:savedDate,due_date:null,note,status:'pending',payment_method:null,paid_date:null});if(pe)return alert('Randevu kaydedildi ancak bekleyen ödeme oluşturulamadı: '+pe.message);}}else{let openLinked=linked.filter(p=>p.status!=='paid');for(const openRow of openLinked){let{error:pe}=await sb.from('pending_payments').delete().eq('id',openRow.id);if(pe)return alert('Randevu güncellendi ancak bekleyen borç kaydı silinemedi: '+pe.message);}}closeModal();await loadAll();openCalendarView('day',savedDate);showSaveToast()}
+async function updateAppt(id){
+  let c=db.customers.find(x=>x.id===$('ecid').value);if(!c)return alert('Müşteri seçin.');
+  let conflict=checkConflict($('edate').value,$('etime').value,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}
+  let payment=document.querySelector('input[name=editPaymentMethod]:checked')?.value||null;
+  let savedDate=$('edate').value,amount=Number($('eprice').value||0),note=$('enote').value.trim()||null;
+  let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');
+  let apptUpdate={customer_id:c.id,appointment_date:savedDate,appointment_time:$('etime').value,service:$('eservice').value,price:amount,payment_method:payment,note,status:$('estatus').value};
+  let{data:updatedAppt,error}=await sb.from('appointments').update(apptUpdate).eq('id',id).select('*').single();
+  if(error)return alert('Randevu kaydedilemedi: '+error.message);
+  if(!updatedAppt||String(updatedAppt.payment_method||'')!==String(payment||''))return alert('Ödeme yöntemi kaydedilemedi. Lütfen tekrar deneyin.');
+  db.appointments=db.appointments.map(a=>a.id===id?updatedAppt:a);
+  try{await syncAppointmentDebt(id);}catch(e){await loadAll();return alert('Randevu kaydedildi ancak bekleyen ödeme eşitlenemedi: '+(e?.message||e));}
+  closeModal();await loadAll();openCalendarView('day',savedDate);showSaveToast();
+}
 function returnToCalendar(id){let a=db.appointments.find(x=>x.id===id);closeModal();openCalendarView('day',a?.appointment_date||localDateStr(0))}
-async function setApptStatus(id,status){let{error}=await sb.from('appointments').update({status}).eq('id',id);if(error)return alert(error.message);await loadAll()}
+async function setApptStatus(id,status){let{error}=await sb.from('appointments').update({status}).eq('id',id);if(error)return alert(error.message);await loadAll();try{await syncAppointmentDebt(id);await loadAll()}catch(e){alert('Durum kaydedildi ancak bekleyen ödeme güncellenemedi: '+(e?.message||e));await loadAll()}}
 async function moveAppt(id,date,time){let conflict=checkConflict(date,time,id);if(conflict){let cc=db.customers.find(x=>x.id===conflict.customer_id);if(!confirm('Bu saat dolu: '+(cc?.pet_name||'Randevu')+' — '+(conflict.appointment_time||'').slice(0,5)+'. Yine de taşıyalım mı?'))return;}let{error}=await sb.from('appointments').update({appointment_date:date,appointment_time:time}).eq('id',id);if(error)return alert(error.message);await loadAll();openCalendarView()}
 function appointmentCard(a,compact=false){let c=db.customers.find(x=>x.id===a.customer_id)||{};let st=a.status||'Bekliyor';let price=Number(a.price||0).toLocaleString('tr-TR')+' ₺';let payment=a.payment_method==='Nakit'?'💵 Nakit':a.payment_method==='Kart'?'💳 Kart':isDebtPayment(a.payment_method)?'📒 Borçlu':'';return `<div class="appt-card" draggable="true" ondragstart="dragAppt(event,'${a.id}')" onclick="editAppt('${a.id}')"><b>${(a.appointment_time||'').slice(0,5)} · ${esc(c.owner_name||'')}</b><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')} · ${esc(a.service||'')} · <strong>${price}</strong>${payment?` · ${payment}`:''}</small><div class="appt-actions">${!compact?`<select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${a.id}',this.value)">${apptStatusOptions(st)}</select>`:''}</div></div>`}
 let draggedApptId='';function dragAppt(e,id){draggedApptId=id;e.dataTransfer.setData('text/plain',id)}
@@ -1348,7 +1394,7 @@ function monthlyRevenue(offset=0){
   let base=new Date(), year=base.getFullYear()+offset, nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let expenses=getExpenses(), rows=[], annualTotal=0, annualExpenses=0, annualApptCount=0, annualSaleCount=0, annualCashTotal=0, annualCardTotal=0;
-  let paidPending=(db.pending_payments||[]).filter(shouldCountPaidPending);
+  let paidPending=countedPaidPending();
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date&&a.appointment_date.startsWith(prefix));
