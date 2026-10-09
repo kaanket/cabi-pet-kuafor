@@ -461,7 +461,7 @@ input:focus,select:focus,textarea:focus{
   <button onclick="location.reload()"><b>⌂</b><span>Ana Sayfa</span></button>
   <button onclick="openAppt()"><b>📅</b><span>Randevu</span></button>
   <button onclick="focusSearch()"><b>🐾</b><span>Müşteriler</span></button>
-  <button onclick="monthlyRevenue()"><b>₺</b><span>Ciro</span></button>
+  <button onclick="openRevenue()"><b>₺</b><span>Ciro</span></button>
   <button onclick="openSettings()"><b>⚙️</b><span>Ayarlar</span></button>
 </div></div>
 
@@ -533,14 +533,15 @@ function trSearch(v){
 }
 
 function shouldCountPaidPending(p){
-  if(p.status!=='paid'||!p.paid_date)return false;
+  if(!p || p.status!=='paid' || !p.paid_date) return false;
   if(p.appointment_id){
-    const a=db.appointments.find(x=>x.id===p.appointment_id);
-    return !!a && a.payment_method==='Borçlu';
+    const a=(db.appointments||[]).find(x=>x.id===p.appointment_id);
+    if(!a || a.payment_method!=='Borçlu') return false;
+    // Borç yeniden açıldıysa eski tahsilat geçmişte kalsın; yeni borç tahsil edilene kadar ciroya girmez.
+    const hasCurrentUnpaid=(db.pending_payments||[]).some(x=>x.appointment_id===p.appointment_id && x.status!=='paid');
+    return !hasCurrentUnpaid;
   }
-  // Eski/manuel kayıtlarda randevu bağlantısı yoksa, aynı müşteri-tarih-tutar
-  // için artık Borçlu olmayan bir randevu varsa tahsilatı ikinci kez sayma.
-  const duplicateAppointment=db.appointments.some(a=>
+  const duplicateAppointment=(db.appointments||[]).some(a=>
     a.customer_id===p.customer_id &&
     a.appointment_date===(p.service_date||'') &&
     Number(a.price||0)===Number(p.amount||0) &&
@@ -1135,7 +1136,7 @@ function openPortfolio(){
   $('modal').style.display='flex';
 }
 
-function openRevenue(){monthlyRevenue(0)}
+function openRevenue(){try{monthlyRevenue(0)}catch(e){console.error('Ciro ekranı açılamadı:',e);alert('Ciro ekranı açılırken hata oluştu. Sayfayı yenileyip tekrar deneyin. Hata: '+(e?.message||e))}}
 const DEFAULT_EXPENSE_CATEGORIES=['Kira','Personel','Elektrik','Su','Doğalgaz','İnternet','Malzeme','Temizlik','Vergi','Diğer'];
 const EXPENSES_STORAGE_KEY='cabi_expenses';
 const EXPENSE_CATS_STORAGE_KEY='cabi_expense_categories';
@@ -1333,12 +1334,12 @@ function monthlyRevenue(offset=0){
   let base=new Date(), year=base.getFullYear()+offset, nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let expenses=getExpenses(), rows=[], annualTotal=0, annualExpenses=0, annualApptCount=0, annualSaleCount=0, annualCashTotal=0, annualCardTotal=0;
-  let paidPending=db.pending_payments.filter(shouldCountPaidPending);
+  let paidPending=(db.pending_payments||[]).filter(shouldCountPaidPending);
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date&&a.appointment_date.startsWith(prefix));
     let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0)&&a.payment_method!=='Borçlu');
-    let paidThisMonth=paidPending.filter(p=>p.paid_date.startsWith(prefix));
+    let paidThisMonth=paidPending.filter(p=>String(p.paid_date||'').startsWith(prefix));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
     let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.reduce((n,p)=>n+(Number(p.amount)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
     let total=serviceTotal+salesTotal, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
