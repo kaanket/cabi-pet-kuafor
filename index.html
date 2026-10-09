@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
+<!-- V112: Bekleyen ödemeler takibi; tahsilat tarihine göre ciro -->
 <!-- V111: Kayıp müşteri süresi 6 aya güncellendi -->
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <!-- V67: Ödeme seçenekleri kompakt -->
-<title>Cabi Pet Kuaför – V111</title>
+<title>Cabi Pet Kuaför – V112</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* V91: Arama girdisi harf/sayı ayrımı ile doğru müşteri alanına aktarılır. */
@@ -427,6 +428,7 @@ input:focus,select:focus,textarea:focus{
   <button onclick="openSales()"><span>🛍️</span> Satış</button>
   <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
   <button onclick="openLostCustomers()"><span>🔴</span> Kayıp Müşteriler</button>
+  <button onclick="openPendingPayments()"><span>💳</span> Bekleyen Ödemeler</button>
 </div>
 <div class="section">Bugünkü Randevular <span id="count" class="muted"></span></div>
 <div id="appointments" class="card"></div>
@@ -469,7 +471,7 @@ input:focus,select:focus,textarea:focus{
 const SUPABASE_URL='https://ibypczlxqhrrownltryc.supabase.co';
 const SUPABASE_KEY='sb_publishable_zh2dVONzQFc2hTpAfCKuXg_hnfSOsTo';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let db={customers:[],appointments:[],sales:[],expenses:[],expense_categories:[]},channel=null,syncTimer=null;
+let db={customers:[],appointments:[],sales:[],expenses:[],expense_categories:[],pending_payments:[]},channel=null,syncTimer=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
 function msg(t,ok=false){$('authMsg').textContent=t;$('authMsg').className='status '+(ok?'success':'error')}
@@ -500,6 +502,9 @@ async function loadAll(){
   let s=await sb.from('sales').select('*').order('sale_date',{ascending:false});
   db.sales=s.error?[]:(s.data||[]);
   await loadExpensesCloud(user.id);
+  let pp=await sb.from('pending_payments').select('*').order('service_date',{ascending:false});
+  db.pending_payments=pp.error?[]:(pp.data||[]);
+  window.pendingPaymentsTableError=pp.error||null;
   render();
 }
 function subscribe(){
@@ -510,6 +515,7 @@ function subscribe(){
     .on('postgres_changes',{event:'*',schema:'public',table:'sales'},()=>loadAll())
     .on('postgres_changes',{event:'*',schema:'public',table:'expenses'},()=>loadAll())
     .on('postgres_changes',{event:'*',schema:'public',table:'expense_categories'},()=>loadAll())
+    .on('postgres_changes',{event:'*',schema:'public',table:'pending_payments'},()=>loadAll())
     .subscribe()
 }
 function petTypeLabel(c){return String(c?.pet_type||'').toLowerCase()==='kedi'?'🐱 Kedi':'🐶 Köpek'}
@@ -530,10 +536,12 @@ function updateHomeSummary(){
   let d=localDateStr(0);
   let today=db.appointments.filter(a=>a.appointment_date===d);
   let valid=today.filter(a=>(a.status||'Bekliyor')==='Geldi' && a.appointment_date<=localDateStr(0));
-  let revenueAppts=valid.reduce((s,a)=>s+(Number(a.price)||0),0);
+  let linkedIds=pendingLinkedAppointmentIds();
+  let revenueAppts=valid.filter(a=>!linkedIds.has(a.id)).reduce((s,a)=>s+(Number(a.price)||0),0);
   let todaySales=(db.sales||[]).filter(s=>s.sale_date===d);
   let revenueSales=todaySales.reduce((s,x)=>s+(Number(x.price)||0),0);
-  let revenue=revenueAppts+revenueSales;
+  let collections=(db.pending_payments||[]).filter(p=>p.status==='paid'&&p.paid_date===d).reduce((s,p)=>s+(Number(p.amount)||0),0);
+  let revenue=revenueAppts+revenueSales+collections;
   let dateObj=new Date(d+'T12:00:00');
   let dateText=dateObj.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   dateText=dateText.charAt(0).toUpperCase()+dateText.slice(1);
@@ -1263,7 +1271,7 @@ async function deleteExpense(id,year,month){
 }
 
 function openSettings(){$('modalTitle').textContent='Ayarlar';$('modalBody').innerHTML=`<div class="card"><b>☁️ Bulut senkronizasyonu aktif</b><p class="muted">Müşteriler, randevular, satışlar ve giderler Supabase'de saklanır. Aynı Cabi hesabıyla giriş yapılan tüm cihazlarda görünür. Cihazlar ayrıca düzenli olarak yenilenir.</p></div><button class="btn" style="width:100%;margin-bottom:10px" onclick="openExpenseCategories()">💸 Gider Kalemleri</button><div class="actions"><button class="btn" onclick="backup()">💾 Yedek Al</button><button class="btn" onclick="$('restoreFile').click()">♻️ Yedekten Yükle</button></div><input id="restoreFile" type="file" accept="application/json,.json" style="display:none" onchange="restoreBackup(this.files[0])">`;$('modal').style.display='flex'}
-async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',payload={...db,expenses:getExpenses(),expense_categories:getExpenseCategories()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function backup(){let filename='cabi-pet-kuafor-yedek-'+localDateStr(0)+'.json',payload={...db,expenses:getExpenses(),expense_categories:getExpenseCategories(),pending_payments:db.pending_payments||[]},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),file=new File([blob],filename,{type:'application/json'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({title:'Cabi Pet Kuaför Yedeği',text:'Cabi Pet Kuaför yedek dosyası',files:[file]});return}catch(e){if(e&&e.name==='AbortError')return}}let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function restoreBackup(file){if(!file)return;try{let text=await file.text(),data=JSON.parse(text);if(!Array.isArray(data.customers)||!Array.isArray(data.appointments))throw new Error('Geçersiz Cabi Pet Kuaför yedek dosyası.');if(!confirm(data.customers.length+' müşteri ve '+data.appointments.length+" randevu Supabase'e yüklenecek. Mevcut kayıtlar aynı ID varsa güncellenecek. Devam edilsin mi?"))return;let{data:{user}}=await sb.auth.getUser();if(!user)throw new Error('Oturum bulunamadı.');let customers=data.customers.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,owner_name:x.owner_name||'',phone:x.phone||'',pet_name:x.pet_name||'',pet_type:x.pet_type||null,breed:x.breed||null,weight:x.weight===''||x.weight==null?null:Number(x.weight),note:x.note||null}));let{error:ce}=await sb.from('customers').upsert(customers,{onConflict:'id'});if(ce)throw ce;let appointments=data.appointments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_date:x.appointment_date,appointment_time:x.appointment_time||null,service:x.service||null,price:Number(x.price||0),payment_method:x.payment_method||null,note:x.note||null,status:x.status||'Bekliyor'})).filter(x=>x.appointment_date&&x.customer_id);let{error:ae}=await sb.from('appointments').upsert(appointments,{onConflict:'id'});if(ae)throw ae;if(Array.isArray(data.expenses)&&data.expenses.length){
   let expenses=data.expenses.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,expense_date:x.expense_date||x.date,category:x.category||'Diğer',amount:Number(x.amount||0),payment_method:x.payment_method||'Nakit',note:x.note||null})).filter(x=>x.expense_date&&x.amount>0);
   let {error:ee}=await sb.from('expenses').upsert(expenses,{onConflict:'id'});if(ee)throw ee;
@@ -1272,28 +1280,52 @@ if(Array.isArray(data.expense_categories)&&data.expense_categories.length){
   let categories=data.expense_categories.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,name:String(x.name||x).trim()})).filter(x=>x.name);
   let {error:ec}=await sb.from('expense_categories').upsert(categories,{onConflict:'id'});if(ec)throw ec;
 }
-await loadAll();alert("Yedek başarıyla Supabase'e yüklendi. Giderler ve gider kalemleri tüm cihazlara senkronize edildi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
+if(Array.isArray(data.pending_payments)&&data.pending_payments.length){
+  let payments=data.pending_payments.map(x=>({id:x.id||crypto.randomUUID(),owner_id:user.id,customer_id:x.customer_id||null,appointment_id:x.appointment_id||null,amount:Number(x.amount||0),service_date:x.service_date||localDateStr(0),due_date:x.due_date||null,note:x.note||null,status:x.status==='paid'?'paid':'pending',payment_method:x.payment_method||null,paid_date:x.paid_date||null})).filter(x=>x.customer_id&&x.amount>0);
+  let {error:pe}=await sb.from('pending_payments').upsert(payments,{onConflict:'id'});if(pe)throw pe;
+}
+await loadAll();alert("Yedek başarıyla Supabase'e yüklendi. Bekleyen ödemeler dahil kayıtlar senkronize edildi.");}catch(e){alert('Yedek yüklenemedi: '+(e.message||e))}finally{let f=$('restoreFile');if(f)f.value=''}}
 function focusSearch(){$('search').focus();scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
 function closeModal(){$('modalTitle').style.color='';$('modal').style.display='none'}
 start();
+
+function pendingCustomerName(p){let c=db.customers.find(x=>x.id===p.customer_id)||{};return {owner:c.owner_name||'Müşteri',pet:c.pet_name||'Hayvan',phone:c.phone||'',type:c.pet_type||''}}
+function openPendingPayments(){
+  $('modalTitle').textContent='💳 Bekleyen Ödemeler';
+  const rows=(db.pending_payments||[]).filter(p=>p.status!=='paid').sort((a,b)=>String(a.due_date||a.service_date||'').localeCompare(String(b.due_date||b.service_date||'')));
+  let total=rows.reduce((n,p)=>n+(Number(p.amount)||0),0);
+  let warning=window.pendingPaymentsTableError?'<div class="warning-card"><b>Bekleyen ödemeler tablosu henüz hazır değil.</b><br>Supabase SQL kurulumunu bir kez çalıştırıp ekranı yenileyin.</div>':'';
+  let list=rows.length?rows.map(p=>{let c=pendingCustomerName(p),late=p.due_date&&p.due_date<localDateStr(0);return `<div class="card" style="margin:10px 0"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><b>${esc(c.owner)} — ${esc(c.pet)}</b><br><small>${esc(c.phone)}</small></div><b style="font-size:20px;color:#b42318;white-space:nowrap">${money(p.amount)}</b></div><div style="font-size:13px;margin-top:8px">Hizmet tarihi: <b>${esc(p.service_date||'—')}</b></div>${p.due_date?`<div style="font-size:13px;margin-top:4px">Son ödeme tarihi: <b>${esc(p.due_date)}</b></div>`:''}${p.note?`<div class="muted" style="font-size:13px;margin-top:5px">Not: ${esc(p.note)}</div>`:''}<div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" style="flex:1" onclick="markPendingPaid('${p.id}')">✓ Tahsil Edildi</button><button class="btn danger" onclick="deletePendingPayment('${p.id}')">Sil</button></div>${late?'<div style="color:#b42318;font-size:12px;font-weight:800;margin-top:8px">⚠️ Vadesi geçti</div>':''}</div>`}).join(''):'<div class="card"><div class="empty">Bekleyen ödeme yok.</div></div>';
+  let customers=db.customers.filter(c=>!c.deleted_at).sort((a,b)=>(a.owner_name||'').localeCompare(b.owner_name||'','tr'));
+  let options=customers.map(c=>`<option value="${c.id}">${esc(c.owner_name)} — ${esc(c.pet_name)}${c.phone?' · '+esc(c.phone):''}</option>`).join('');
+  $('modalBody').innerHTML=warning+`<div class="card"><div class="muted">Toplam bekleyen tutar</div><h2 style="margin:4px 0;color:#b42318">${money(total)}</h2><div class="muted">${rows.length} bekleyen ödeme</div></div><h3>Bekleyen Ödeme Ekle</h3><label>Müşteri</label><select id="ppCustomer" onchange="pendingAppointmentOptions()"><option value="">Müşteri seçin</option>${options}</select><label>İlgili randevu (isteğe bağlı)</label><select id="ppAppointment"><option value="">Randevu seçmeden devam et</option></select><label>Ücret (₺)</label><input id="ppAmount" type="number" min="0.01" step="0.01" placeholder="Tahsil edilecek tutar"><div class="appt-datetime-grid"><div><label>Hizmet tarihi</label><input id="ppServiceDate" type="date" value="${localDateStr(0)}"></div><div><label>Son ödeme tarihi</label><input id="ppDueDate" type="date"></div></div><label>Not</label><textarea id="ppNote" placeholder="Örn. haftaya ödeyecek"></textarea><button class="btn primary" style="width:100%" onclick="addPendingPayment()">＋ Bekleyen Ödemeyi Kaydet</button><h3 style="margin-top:22px">Ödeme Bekleyenler</h3>${list}<button class="btn" style="width:100%;margin-top:10px" onclick="closeModal()">Kapat</button>`;
+  $('modal').style.display='flex';
+}
+function pendingAppointmentOptions(){let cid=$('ppCustomer')?.value;if(!$('ppAppointment'))return;let arr=db.appointments.filter(a=>a.customer_id===cid).sort((a,b)=>String(b.appointment_date||'').localeCompare(String(a.appointment_date||'')));$('ppAppointment').innerHTML='<option value="">Randevu seçmeden devam et</option>'+arr.map(a=>`<option value="${a.id}">${esc(a.appointment_date)} · ${esc(a.service||'Hizmet')} · ${money(a.price)}</option>`).join('');let chosen=arr[0];if(chosen){$('ppAppointment').value=chosen.id;if(!$('ppAmount').value)$('ppAmount').value=Number(chosen.price||0);$('ppServiceDate').value=chosen.appointment_date||localDateStr(0)}}
+async function addPendingPayment(){let{data:{user}}=await sb.auth.getUser();if(!user)return alert('Oturum bulunamadı.');let customerId=$('ppCustomer').value,amount=Number($('ppAmount').value||0);if(!customerId)return alert('Müşteri seçin.');if(!(amount>0))return alert('Geçerli bir borç tutarı girin.');let appointmentId=$('ppAppointment').value||null;let row={owner_id:user.id,customer_id:customerId,appointment_id:appointmentId,amount,service_date:$('ppServiceDate').value||localDateStr(0),due_date:$('ppDueDate').value||null,note:$('ppNote').value.trim()||null,status:'pending',payment_method:null,paid_date:null};let{error}=await sb.from('pending_payments').insert(row);if(error)return alert('Bekleyen ödeme kaydedilemedi: '+error.message);await loadAll();openPendingPayments()}
+async function markPendingPaid(id){let p=(db.pending_payments||[]).find(x=>x.id===id);if(!p)return;let method=prompt('Tahsilat yöntemi: Nakit veya Kart yazın.','Nakit');if(method===null)return;method=String(method).trim();if(!['Nakit','Kart'].includes(method))return alert('Lütfen Nakit veya Kart yazın.');if(!confirm(money(p.amount)+' tahsil edildi olarak işaretlensin mi? Ciro tahsilat tarihine yazılacak.'))return;let{error}=await sb.from('pending_payments').update({status:'paid',paid_date:localDateStr(0),payment_method:method}).eq('id',id);if(error)return alert('Tahsilat kaydedilemedi: '+error.message);await loadAll();openPendingPayments()}
+async function deletePendingPayment(id){if(!confirm('Bu bekleyen ödeme kaydı silinsin mi?'))return;let{error}=await sb.from('pending_payments').delete().eq('id',id);if(error)return alert('Kayıt silinemedi: '+error.message);await loadAll();openPendingPayments()}
+function pendingLinkedAppointmentIds(){return new Set((db.pending_payments||[]).filter(p=>p.appointment_id).map(p=>p.appointment_id))}
 
 function monthlyRevenue(offset=0){
   let base=new Date(), year=base.getFullYear()+offset, nowYear=base.getFullYear(), nowMonth=base.getMonth();
   let months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   let expenses=getExpenses(), rows=[], annualTotal=0, annualExpenses=0, annualApptCount=0, annualSaleCount=0, annualCashTotal=0, annualCardTotal=0;
+  let linkedPendingAppts=pendingLinkedAppointmentIds(), paidPending=db.pending_payments.filter(p=>p.status==='paid'&&p.paid_date);
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0')+'-';
     let appts=db.appointments.filter(a=>a.appointment_date&&a.appointment_date.startsWith(prefix));
-    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0));
+    let revenueAppts=appts.filter(a=>(a.status||'Bekliyor')==='Geldi'&&a.appointment_date<=localDateStr(0)&&!linkedPendingAppts.has(a.id));
+    let paidThisMonth=paidPending.filter(p=>p.paid_date.startsWith(prefix));
     let sales=(db.sales||[]).filter(s=>s.sale_date&&s.sale_date.startsWith(prefix));
-    let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
+    let serviceTotal=revenueAppts.reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.reduce((n,p)=>n+(Number(p.amount)||0),0), salesTotal=sales.reduce((n,x)=>n+(Number(x.price)||0),0);
     let total=serviceTotal+salesTotal, monthExpenses=expenses.filter(x=>expenseMonthKey(x.expense_date||x.date)===year+'-'+String(m+1).padStart(2,'0'));
     let expenseTotal=monthExpenses.reduce((n,x)=>n+(Number(x.amount)||0),0), net=total-expenseTotal;
-    let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((n,x)=>n+(Number(x.price)||0),0);
-    let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((n,a)=>n+(Number(a.price)||0),0)+sales.filter(s=>(s.payment_method||'')==='Kart').reduce((n,x)=>n+(Number(x.price)||0),0);
+    let cashTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Nakit').reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.filter(p=>p.payment_method==='Nakit').reduce((n,p)=>n+(Number(p.amount)||0),0)+sales.filter(s=>(s.payment_method||'')==='Nakit').reduce((n,x)=>n+(Number(x.price)||0),0);
+    let cardTotal=revenueAppts.filter(a=>(a.payment_method||'')==='Kart').reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.filter(p=>p.payment_method==='Kart').reduce((n,p)=>n+(Number(p.amount)||0),0)+sales.filter(s=>(s.payment_method||'')==='Kart').reduce((n,x)=>n+(Number(x.price)||0),0);
     let days=new Set(revenueAppts.map(a=>a.appointment_date)).size;
-    let catRevenue=revenueAppts.filter(a=>String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR')==='kedi').reduce((n,a)=>n+(Number(a.price)||0),0);
-    let dogRevenue=revenueAppts.filter(a=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).reduce((n,a)=>n+(Number(a.price)||0),0);
+    let catRevenue=revenueAppts.filter(a=>String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR')==='kedi').reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.filter(p=>String(db.customers.find(x=>x.id===p.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR')==='kedi').reduce((n,p)=>n+(Number(p.amount)||0),0);
+    let dogRevenue=revenueAppts.filter(a=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).reduce((n,a)=>n+(Number(a.price)||0),0)+paidThisMonth.filter(p=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===p.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).reduce((n,p)=>n+(Number(p.amount)||0),0);
     let cats=revenueAppts.filter(a=>String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR')==='kedi').length;
     let dogs=revenueAppts.filter(a=>['köpek','kopek'].includes(String(db.customers.find(x=>x.id===a.customer_id)?.pet_type||'').toLocaleLowerCase('tr-TR'))).length;
     rows.push({month:months[m],total,serviceTotal,salesTotal,catRevenue,dogRevenue,expenseTotal,net,count:revenueAppts.length+sales.length,days,cats,dogs,avg:revenueAppts.length?total/revenueAppts.length:0,allCount:appts.length,salesCount:sales.length});
@@ -1335,7 +1367,8 @@ function monthlyRevenue(offset=0){
   '</div>';
 
   let petTypeRevenue={kedi:0,kopek:0};
-  db.appointments.forEach(a=>{if(!a.appointment_date||!a.appointment_date.startsWith(year+'-')||(a.status||'Bekliyor')!=='Geldi')return;let c=db.customers.find(x=>x.id===a.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(a.price)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(a.price)||0;});
+  db.appointments.forEach(a=>{if(!a.appointment_date||!a.appointment_date.startsWith(year+'-')||(a.status||'Bekliyor')!=='Geldi'||linkedPendingAppts.has(a.id))return;let c=db.customers.find(x=>x.id===a.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(a.price)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(a.price)||0;});
+  paidPending.filter(p=>p.paid_date&&p.paid_date.startsWith(year+'-')).forEach(p=>{let c=db.customers.find(x=>x.id===p.customer_id),t=String(c?.pet_type||'').trim().toLocaleLowerCase('tr-TR');if(t==='kedi')petTypeRevenue.kedi+=Number(p.amount)||0;else if(t==='köpek'||t==='kopek')petTypeRevenue.kopek+=Number(p.amount)||0;});
   let animalTotal=petTypeRevenue.kedi+petTypeRevenue.kopek,catPct=animalTotal?petTypeRevenue.kedi/animalTotal*100:0,dogPct=animalTotal?petTypeRevenue.kopek/animalTotal*100:0;
   html+='<h3 style="margin:18px 0 10px">🐾 Hayvan Türüne Göre Ciro</h3><div class="card" style="padding:14px"><div style="display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid #eee"><span>🐱 Kedi <small class="muted">('+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+money(petTypeRevenue.kedi)+'</b></div><div style="display:flex;justify-content:space-between;padding:10px 2px"><span>🐶 Köpek <small class="muted">('+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%)</small></span><b>'+money(petTypeRevenue.kopek)+'</b></div></div>';
   html+='<div style="display:flex;gap:8px;margin-top:18px"><button class="btn" style="flex:1" onclick="openSales()">🛍️ Satış Ekle</button><button class="btn" style="flex:1" onclick="openSalesHistory()">📋 Satış Geçmişi</button></div><button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
