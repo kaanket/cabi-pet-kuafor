@@ -1283,7 +1283,10 @@ function whatsappPendingReminder(id){
   if(ph.startsWith('0'))ph='90'+ph.slice(1);else if(ph.length===10)ph='90'+ph;
   if(!ph)return alert('Bu müşterinin telefon numarası kayıtlı değil.');
   const nl=String.fromCharCode(10);
-  const text='Merhaba '+(c.owner_name||'')+', Cabi Pet Kuaför’den yazıyorum.'+nl+nl+'🐾 '+(c.pet_name||'Evcil dostumuz')+' için bekleyen ödeme tutarı '+money(p.amount)+'.'+nl+nl+'Uygun olduğunuzda ödemenizi tamamlamanızı rica ederiz. Ödeme yaptıysanız bu mesajı dikkate almayabilirsiniz.'+nl+nl+'Teşekkür ederiz. 🐾'+nl+'Cabi Pet Kuaför';
+  const date=p.created_at?new Date(p.created_at):new Date();
+  const month=date.toLocaleDateString('tr-TR',{month:'long'});
+  const amount=Number(p.amount||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2});
+  const text='Merhaba, Cabi Pet olarak, hesabınızda '+month+' ayına ait '+amount+' TL ödenmemiş bakiye bulunduğunu hatırlatmak isteriz.'+nl+nl+'Ödemenizi en kısa sürede gerçekleştirmenizi rica eder, anlayışınız için teşekkür ederiz.'+nl+nl+'IBAN: TR88 0015 7000 0000 0093 6541 68'+nl+'Alıcı: Dilek Adıyaman'+nl+nl+'Cabi Pet Kuaför'+nl+'Görüşmek üzere. 🐾';
   window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
 }
 async function addPendingPayment(){
