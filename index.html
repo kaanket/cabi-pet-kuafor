@@ -178,15 +178,7 @@ body{background:#f5f8f7}
   .appt-week{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
   .appt-day{min-width:120px}
 }
-.save-toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(12px);background:#15947f;color:#fff;padding:13px 22px;border-radius:14px;font-weight:800;font-size:15px;box-shadow:0 8px 24px #0003;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.save-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-/* Ana sayfa küçük kullanılabilirlik dokunuşları: yerleşim ve kart boyutları korunur. */
-.home-empty-state{min-height:126px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:22px 16px;color:var(--cabi-muted);}
-.home-empty-state .empty-state-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--cabi-soft);color:var(--cabi-primary);font-size:19px;font-weight:800;}
-.home-empty-state b{font-size:15px;color:var(--cabi-text);}
-.home-empty-state small{font-size:13px;line-height:1.45;color:var(--cabi-muted);}
-button:focus-visible{outline:3px solid #68B9A9;outline-offset:3px;}
-.quick,.tools-row button,.profile-btn,.logout-top,.nav button{transition:transform .12s ease,box-shadow .12s ease,background-color .12s ease;}
-</style>
+.save-toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(12px);background:#15947f;color:#fff;padding:13px 22px;border-radius:14px;font-weight:800;font-size:15px;box-shadow:0 8px 24px #0003;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.save-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}</style>
 
 <style>
 /* ===== V8 — Premium mint / petrol renk paleti ===== */
@@ -386,6 +378,57 @@ input:focus,select:focus,textarea:focus{
  .v85-date-time input,.v85-date-time select{font-size:14px!important;}
 }
 </style>
+
+<style id="v112-home-stability">
+/* V112: Ana ekran mobil kararlılığı — veri/iş mantığı değiştirilmez */
+html{ -webkit-text-size-adjust:100%; }
+button, input, select, textarea{ touch-action:manipulation; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible{
+  outline:3px solid #68B9A9; outline-offset:2px;
+}
+/* Randevu kartları dar telefonlarda ücret ve durum alanlarını sıkıştırmasın. */
+@media(max-width:600px){
+  #appointments .row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+    padding:15px 0!important;
+  }
+  #appointments .row>div:first-child,
+  #appointments .row>div:last-child{
+    width:100%!important; min-width:0!important; max-width:100%!important;
+    flex:none!important;
+  }
+  #appointments .today-appt-side{
+    width:100%!important; min-width:0!important; flex:none!important;
+    align-items:stretch!important; gap:8px!important;
+  }
+  #appointments .today-appt-top{
+    justify-content:space-between!important; gap:8px!important;
+  }
+  #appointments .today-appt-actions{
+    justify-content:flex-start!important; gap:8px!important;
+  }
+  #appointments .today-appt-actions .btn{
+    min-height:42px!important; font-size:12px!important; padding:9px 11px!important;
+  }
+  #appointments .status-select{max-width:58%;}
+  #tomorrowAppointments .row{
+    display:grid!important; grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important; align-items:start!important;
+  }
+  #tomorrowAppointments .row>div:first-child,
+  #tomorrowAppointments .row>div:last-child{
+    width:100%!important; min-width:0!important; max-width:100%!important;
+    flex:none!important;
+  }
+  #tomorrowAppointments .row>button{justify-self:start;min-height:42px;}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important;}
+}
+</style>
+
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
@@ -564,9 +607,9 @@ function restoreTodayHero(){
   try{if(localStorage.getItem('cabi_today_hero_collapsed')==='1')el.classList.add('hero-collapsed')}catch(e){}
 }
 function render(){renderAppts();renderTomorrow();renderCustomers();updateHomeSummary();restoreTodayHero()}
-function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')}${c.breed?` · ${esc(c.breed)}`:''} · ${esc(x.service||'')}</small></div><div class="today-appt-side"><div class="today-appt-top"><span class="tag today-price">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div><div class="today-appt-actions"><button class="btn whatsapp-btn" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">💬 Hatırlatma</button><button class="btn whatsapp-btn" onclick="event.stopPropagation();whatsappReady('${x.id}')">🐾 Hazır</button></div></div></div>`}).join(''):'<div class="empty home-empty-state"><span class="empty-state-icon">✓</span><b>Bugün kayıtlı randevu yok</b><small>Yeni randevu eklediğinde burada görünecek.</small></div>'}
+function renderAppts(){let d=localDateStr(0),a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('count').textContent='· '+a.length+' randevu';$('appointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{},st=x.status||'Bekliyor';return `<div class="row" onclick="editAppt('${x.id}')"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')}${c.breed?` · ${esc(c.breed)}`:''} · ${esc(x.service||'')}</small></div><div class="today-appt-side"><div class="today-appt-top"><span class="tag today-price">${Number(x.price||0).toLocaleString('tr-TR')} ₺</span><select class="status-select ${statusClass(st)}" onclick="event.stopPropagation()" onchange="setApptStatus('${x.id}',this.value)">${apptStatusOptions(st)}</select></div><div class="today-appt-actions"><button class="btn whatsapp-btn" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">💬 Hatırlatma</button><button class="btn whatsapp-btn" onclick="event.stopPropagation();whatsappReady('${x.id}')">🐾 Hazır</button></div></div></div>`}).join(''):'<div class="empty">Bugün kayıtlı randevu yok.</div>'}
 function localDateStr(offset){let d=new Date();d.setDate(d.getDate()+offset);let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}
-function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row" onclick="editAppt('${x.id}')" style="cursor:pointer"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')}${c.breed?` · ${esc(c.breed)}`:''} · ${esc(x.service||'')}</small></div><button class="btn whatsapp-btn" style="margin-left:10px;white-space:nowrap" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">💬 Hatırlatma</button></div>`}).join(''):'<div class="empty home-empty-state"><span class="empty-state-icon">☀</span><b>Yarın için randevu yok</b><small>Yarınki planın burada listelenecek.</small></div>'}
+function renderTomorrow(){let d=localDateStr(1);let a=db.appointments.filter(x=>x.appointment_date===d).sort((x,y)=>(x.appointment_time||'').localeCompare(y.appointment_time||''));$('tomorrowCount').textContent='· '+a.length+' randevu';$('tomorrowAppointments').innerHTML=a.length?a.map(x=>{let c=db.customers.find(c=>c.id===x.customer_id)||{};return `<div class="row" onclick="editAppt('${x.id}')" style="cursor:pointer"><div><b>${esc((x.appointment_time||'').slice(0,5))} · ${esc(c.owner_name||'')}${c.deleted_at?' · Silinmiş müşteri':''}</b><br><small>${petTypeLabel(c)} · ${esc(c.pet_name||'')}${c.breed?` · ${esc(c.breed)}`:''} · ${esc(x.service||'')}</small></div><button class="btn whatsapp-btn" style="margin-left:10px;white-space:nowrap" onclick="event.stopPropagation();whatsappAppointment('${x.id}')">💬 Hatırlatma</button></div>`}).join(''):'<div class="empty">Yarın randevu yok.</div>'}
 function missedCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='Gelmedi').length}
 function cancelCount(customerId){return db.appointments.filter(a=>a.customer_id===customerId && (a.status||'Bekliyor')==='İptal').length}
 function isRisky(customerId){return missedCount(customerId)>=2}
