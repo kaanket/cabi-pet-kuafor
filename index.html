@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#15947f">
+<!-- V115: Ana ekran müşteri kısayolu tekrarı giderildi, bekleyen ödemeler görünür -->
 <!-- V118: Borçlu tahsilatlarının çift ciro yazmasını önle -->\n<!-- V120: Ciro ekranı ReferenceError ve borç tahsilatı/ödeme yöntemi tutarlılığı düzeltmesi -->
 <!-- V121: Borçlu ödeme yöntemi normalizasyonu ve ciro tutarlılığı -->
 <!-- V122: Aynı randevuya bağlı eski tahsilat satırlarının çift sayımı engellenir -->
@@ -432,13 +433,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--cabi-mint);box-shadow
 <div class="quick-title">Hızlı İşlemler</div>
 <div class="quick-grid">
   <button class="quick primary" onclick="openAppt()"><span>＋</span><b>Yeni Randevu</b><small>Hızlıca ekle</small></button>
-  <button class="quick" onclick="focusSearch()"><span>⌕</span><b>Müşteri Ara</b><small>Kaydı bul</small></button>
-  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Günü görüntüle</small></button>
+  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Randevuları gör</small></button>
   <button class="quick" onclick="openFreeSlots()"><span>◷</span><b>Boş Saatler</b><small>Uygun saatleri gör</small></button>
+  <button class="quick" onclick="openCustomer()"><span>👤</span><b>Yeni Müşteri</b><small>Kayıt oluştur</small></button>
 </div>
 
 <div class="tools-row">
-  <button onclick="openCustomer()"><span>👤</span> Yeni Müşteri</button>
   <button onclick="openRevenue()"><span>₺</span> Ciro</button>
   <button onclick="openSales()"><span>🛍️</span> Satış</button>
   <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
