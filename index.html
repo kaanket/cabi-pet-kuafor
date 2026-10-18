@@ -429,6 +429,29 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 }
 </style>
 
+
+<style id="v113-home-usability-theme">
+:root{
+  --cabi-deep:#164F49;
+  --cabi-primary:#18796D;
+  --cabi-mint:#79B9A9;
+  --cabi-soft:#E8F2ED;
+  --cabi-bg:#F4F6F0;
+  --cabi-text:#203A35;
+  --cabi-muted:#71817A;
+  --cabi-border:#D8E4DD;
+}
+body{background:var(--cabi-bg);color:var(--cabi-text)}
+.hero-card{background:linear-gradient(135deg,#164F49 0%,#18796D 62%,#399987 100%)}
+.home-eyebrow,.quick span{color:var(--cabi-primary)}
+.quick.primary{background:var(--cabi-primary);border-color:var(--cabi-primary)}
+.card,#appointments.card,#tomorrowAppointments.card,#customers.card{border-color:var(--cabi-border)}
+.nav{border-top-color:var(--cabi-border)}
+.nav button:first-child{color:var(--cabi-primary)}
+input:focus,select:focus,textarea:focus{border-color:var(--cabi-mint);box-shadow:0 0 0 3px #79B9A922}
+.quick:focus-visible,.tools-row button:focus-visible,.nav button:focus-visible,.profile-btn:focus-visible,.btn:focus-visible{outline:3px solid #79B9A9;outline-offset:2px}
+</style>
+
 </head>
 <body>
 <div id="auth" class="auth"><div class="card">
@@ -467,13 +490,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 <div class="quick-title">Hızlı İşlemler</div>
 <div class="quick-grid">
   <button class="quick primary" onclick="openAppt()"><span>＋</span><b>Yeni Randevu</b><small>Hızlıca ekle</small></button>
-  <button class="quick" onclick="focusSearch()"><span>⌕</span><b>Müşteri Ara</b><small>Kaydı bul</small></button>
-  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Günü görüntüle</small></button>
+  <button class="quick" onclick="openCalendar()"><span>▣</span><b>Takvim</b><small>Randevuları gör</small></button>
   <button class="quick" onclick="openFreeSlots()"><span>◷</span><b>Boş Saatler</b><small>Uygun saatleri gör</small></button>
+  <button class="quick" onclick="openCustomer()"><span>👤</span><b>Yeni Müşteri</b><small>Kayıt oluştur</small></button>
 </div>
 
 <div class="tools-row">
-  <button onclick="openCustomer()"><span>👤</span> Yeni Müşteri</button>
   <button onclick="openRevenue()"><span>₺</span> Ciro</button>
   <button onclick="openSales()"><span>🛍️</span> Satış</button>
   <button onclick="openPortfolio()"><span>🐾</span> Portföy</button>
@@ -509,7 +531,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 <div class="nav">
   <button onclick="location.reload()"><b>⌂</b><span>Ana Sayfa</span></button>
   <button onclick="openAppt()"><b>📅</b><span>Randevu</span></button>
-  <button onclick="focusSearch()"><b>🐾</b><span>Müşteriler</span></button>
+  <button onclick="focusSearch()" aria-label="Müşteri listesine ve aramaya git"><b>🐾</b><span>Müşteriler</span></button>
   <button onclick="monthlyRevenue()"><b>₺</b><span>Ciro</span></button>
   <button onclick="openSettings()"><b>⚙️</b><span>Ayarlar</span></button>
 </div></div>
