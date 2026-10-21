@@ -164,6 +164,22 @@ body{background:#f5f8f7}
 
 
 .sales-history-list{max-height:52vh;overflow-y:auto;overflow-x:hidden;padding:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin}
+.sales-filter-row{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex:none}
+.sales-filter-row label{white-space:nowrap}
+.sales-filter-row select{margin:0;min-width:0;flex:1;padding:10px 12px}
+.sales-summary{font-size:12px;margin:0 0 8px;flex:none}
+.sales-history-list{max-height:none;overflow:visible}
+.sales-history-row{align-items:center;gap:8px;min-width:0}
+.sales-history-info{flex:1;min-width:0;overflow-wrap:anywhere}
+.sales-history-info small{font-size:11px}
+.sales-history-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex:none;flex-wrap:wrap;max-width:56%}
+.sales-history-actions strong{white-space:nowrap;font-size:14px}
+.sales-history-actions .btn{padding:9px 8px;font-size:12px;white-space:nowrap}
+.sales-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-bottom:4px}
+.sales-pager .btn{padding:10px 12px;font-size:13px}
+.sales-pager .btn:disabled{opacity:.4}
+@media(max-width:430px){.sales-history-actions{max-width:52%;gap:4px}.sales-history-actions .btn{padding:8px 6px;font-size:11px}.sales-history-actions strong{font-size:13px}.sales-history-row{gap:6px}}
+
 
 /* V49 — Ödeme yöntemi */
 .payment-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:5px 0 10px}
@@ -1029,7 +1045,7 @@ async function deleteSale(id){
   // izin hatası satış silme işlemini bozmaz.
   db.sales=(db.sales||[]).filter(x=>x.id!==id);
   render();
-  openSalesHistory();
+  openAllSales();
 }
 
 async function openSalesHistory(){
@@ -1055,23 +1071,53 @@ async function openSalesHistory(){
   $('modal').style.display='flex';
 }
 
+let allSalesPage=0;
+let allSalesFilter='month';
+const ALL_SALES_PAGE_SIZE=20;
 function openAllSales(){
-  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  allSalesPage=0;
+  allSalesFilter='month';
   $('modalTitle').textContent='🛍️ Tüm Satışlar';
-  $('modalBody').innerHTML=sales.length?
-    `<div class="sales-history-list">${sales.map(s=>`
-      <div class="row">
-        <div><b>${esc(s.product_name||s.sale_type||'')}</b><br>
-        <small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong>
-          <button class="btn" style="padding:8px 10px" onclick="editSale('${s.id}')">✏️ Düzenle</button>
-          <button class="btn danger" style="padding:8px 10px" onclick="deleteSale('${s.id}')">🗑️ Sil</button>
-        </div>
-      </div>
-    `).join('')}</div>`:
-    '<div class="card">Henüz ürün satışı yok.</div>';
+  $('modalBody').innerHTML=`
+    <div class="sales-filter-row">
+      <label for="allSalesFilter">Tarih:</label>
+      <select id="allSalesFilter" onchange="allSalesFilter=this.value;allSalesPage=0;renderAllSalesPage()">
+        <option value="month" selected>Bu ay</option>
+        <option value="today">Bugün</option>
+        <option value="7days">Son 7 gün</option>
+        <option value="all">Tüm zamanlar</option>
+      </select>
+    </div>
+    <div id="allSalesSummary" class="muted sales-summary"></div>
+    <div id="allSalesList"></div>
+    <div id="allSalesPager" class="sales-pager"></div>`;
   $('modal').style.display='flex';
+  renderAllSalesPage();
+}
+function renderAllSalesPage(){
+  let sales=Array.isArray(db.sales)?db.sales.slice().sort((a,b)=>(b.sale_date||b.created_at||'').localeCompare(a.sale_date||a.created_at||'')):[];
+  const today=localDateStr(0);
+  const d=new Date(today+'T12:00:00');
+  const monthStart=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+  const weekStart=new Date(d);weekStart.setDate(weekStart.getDate()-6);
+  const weekStr=weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0')+'-'+String(weekStart.getDate()).padStart(2,'0');
+  if(allSalesFilter==='month')sales=sales.filter(s=>(s.sale_date||'')>=monthStart&&(s.sale_date||'')<=today);
+  else if(allSalesFilter==='today')sales=sales.filter(s=>(s.sale_date||'')===today);
+  else if(allSalesFilter==='7days')sales=sales.filter(s=>(s.sale_date||'')>=weekStr&&(s.sale_date||'')<=today);
+  const total=sales.reduce((sum,s)=>sum+Number(s.price||0),0);
+  const pages=Math.max(1,Math.ceil(sales.length/ALL_SALES_PAGE_SIZE));
+  allSalesPage=Math.min(Math.max(0,allSalesPage),pages-1);
+  const pageRows=sales.slice(allSalesPage*ALL_SALES_PAGE_SIZE,(allSalesPage+1)*ALL_SALES_PAGE_SIZE);
+  const summary=$('allSalesSummary');
+  if(summary)summary.textContent=`${sales.length} kayıt · Toplam ${total.toLocaleString('tr-TR',{maximumFractionDigits:2})} ₺ · Sayfa ${allSalesPage+1}/${pages}`;
+  const list=$('allSalesList');
+  if(list)list.innerHTML=pageRows.length?`<div class="sales-history-list">${pageRows.map(s=>`
+      <div class="row sales-history-row">
+        <div class="sales-history-info"><b>${esc(s.product_name||s.sale_type||'')}</b><br><small>${esc(s.sale_type||'Diğer')} · ${esc(s.sale_date||'')}${s.payment_method?` · ${s.payment_method==='Nakit'?'💵 Nakit':'💳 Kart'}`:''}</small></div>
+        <div class="sales-history-actions"><strong>${Number(s.price||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2})} ₺</strong><button class="btn" onclick="editSale('${s.id}')">✏️ Düzenle</button><button class="btn danger" onclick="deleteSale('${s.id}')">🗑️ Sil</button></div>
+      </div>`).join('')}</div>`:'<div class="card">Bu dönem için satış kaydı yok.</div>';
+  const pager=$('allSalesPager');
+  if(pager)pager.innerHTML=`<button class="btn" ${allSalesPage===0?'disabled':''} onclick="allSalesPage--;renderAllSalesPage()">‹ Önceki</button><span>${allSalesPage+1} / ${pages}</span><button class="btn" ${allSalesPage>=pages-1?'disabled':''} onclick="allSalesPage++;renderAllSalesPage()">Sonraki ›</button>`;
 }
 
 function editSale(id){
