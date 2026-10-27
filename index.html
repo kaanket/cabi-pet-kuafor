@@ -13,7 +13,7 @@
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <!-- V67: Ödeme seçenekleri kompakt -->
-<title>Cabi Pet Kuaför – V125</title>
+<title>Cabi Pet Kuaför – V126</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* V91: Arama girdisi harf/sayı ayrımı ile doğru müşteri alanına aktarılır. */
@@ -1237,6 +1237,21 @@ function openPortfolio(){
   let catPct=active.length?cats/active.length*100:0;
   let dogPct=active.length?dogs/active.length*100:0;
 
+  let base=new Date();
+  let year=base.getFullYear();
+  let monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  let monthlyNew=[];
+  for(let m=0;m<12;m++){
+    let prefix=year+'-'+String(m+1).padStart(2,'0');
+    let rows=active.filter(c=>{
+      let created=String(c.created_at||'').slice(0,7);
+      return created===prefix;
+    });
+    let mc=rows.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
+    let md=rows.filter(c=>['köpek','kopek'].includes(String(c.pet_type||'').trim().toLowerCase())).length;
+    monthlyNew.push({month:monthNames[m],cats:mc,dogs:md,total:rows.length,current:m===base.getMonth()});
+  }
+
   $('modalTitle').textContent='🐾 Müşteri Portföyü';
   $('modalBody').innerHTML=
     '<div class="card" style="text-align:center">'+
@@ -1248,8 +1263,14 @@ function openPortfolio(){
       '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐶</div><b style="font-size:24px">'+dogs+'</b><div>Köpek</div><small class="muted">'+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
       '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐱</div><b style="font-size:24px">'+cats+'</b><div>Kedi</div><small class="muted">'+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
     '</div>'+
+    '<h3 style="margin:18px 0 8px">📅 '+year+' Aylık Yeni Müşteriler</h3>'+
+    '<div class="muted" style="font-size:12px;margin-bottom:8px">Müşteri kayıt tarihine göre hesaplanır; aynı müşteri tekrar sayılmaz.</div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+      '<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;background:#eaf4f1;font-size:12px;font-weight:800"><span>Ay</span><span>🐶 Köpek</span><span>🐱 Kedi</span><span>Toplam</span></div>'+
+      monthlyNew.map(r=>'<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;border-top:1px solid #e5ecea;'+(r.current?'background:#effaf7;font-weight:800;':'')+'"><span>'+r.month+(r.current?' •':'')+'</span><span>'+r.dogs+'</span><span>'+r.cats+'</span><span>'+r.total+'</span></div>').join('')+
+    '</div>'+
     (other?'<div class="card" style="text-align:center"><b>Diğer / türü belirtilmemiş</b><div style="font-size:22px;margin-top:4px">'+other+'</div></div>':'')+
-    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez.</div>'+
+    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez. Aylık yeni müşteri sayısı kayıt tarihine göre hesaplanır.</div>'+
     '<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
   $('modal').style.display='flex';
 }
