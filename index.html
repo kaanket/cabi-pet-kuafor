@@ -13,7 +13,7 @@
 <!-- V110: Aylık Ciro kartlarında Kedi/Köpek/Satış ciro ayrımı -->
 <!-- V31: Takvim randevu ücretleri görünür ve sağda belirgin -->
 <!-- V67: Ödeme seçenekleri kompakt -->
-<title>Cabi Pet Kuaför – V127</title>
+<title>Cabi Pet Kuaför – V128</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* V91: Arama girdisi harf/sayı ayrımı ile doğru müşteri alanına aktarılır. */
@@ -1226,7 +1226,9 @@ function whatsappLost(id){
   window.location.href='whatsapp://send?phone='+ph+'&text='+encodeURIComponent(text);
 }
 
-function openPortfolio(){
+let portfolioYearOffset=0;
+function openPortfolio(yearOffset=portfolioYearOffset){
+  portfolioYearOffset=Number.isFinite(Number(yearOffset))?Number(yearOffset):0;
   let active=db.customers.filter(c=>!c.deleted_at);
   let cats=active.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
   let dogs=active.filter(c=>['köpek','kopek'].includes(String(c.pet_type||'').trim().toLowerCase())).length;
@@ -1235,11 +1237,10 @@ function openPortfolio(){
   let dogPct=active.length?dogs/active.length*100:0;
 
   let base=new Date();
-  let year=base.getFullYear();
+  let year=base.getFullYear()+portfolioYearOffset;
+  let currentYear=base.getFullYear();
   let monthNames=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 
-  // İlk randevu tarihini esas al: müşteri tekrar geldikçe yeni müşteri sayılmaz.
-  // Müşteri kaydının created_at tarihi yedek kaynak olarak kullanılır.
   const firstAppointmentByCustomer={};
   (db.appointments||[]).forEach(a=>{
     if(!a.customer_id||!a.appointment_date)return;
@@ -1259,7 +1260,7 @@ function openPortfolio(){
     });
     let mc=rows.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
     let md=rows.filter(c=>['köpek','kopek'].includes(String(c.pet_type||'').trim().toLowerCase())).length;
-    monthlyNew.push({month:monthNames[m],cats:mc,dogs:md,total:rows.length,current:m===base.getMonth()});
+    monthlyNew.push({month:monthNames[m],cats:mc,dogs:md,total:rows.length,current:year===currentYear&&m===base.getMonth()});
   }
 
   $('modalTitle').textContent='🐾 Müşteri Portföyü';
@@ -1273,7 +1274,14 @@ function openPortfolio(){
       '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐶</div><b style="font-size:24px">'+dogs+'</b><div>Köpek</div><small class="muted">'+dogPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
       '<div class="card" style="text-align:center;margin:0"><div style="font-size:28px">🐱</div><b style="font-size:24px">'+cats+'</b><div>Kedi</div><small class="muted">'+catPct.toLocaleString('tr-TR',{maximumFractionDigits:1})+'%</small></div>'+
     '</div>'+
-    '<h3 style="margin:18px 0 8px">📅 '+year+' Aylık Yeni Müşteriler</h3>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 8px">'+
+      '<button class="btn" onclick="openPortfolio('+(portfolioYearOffset-1)+')" aria-label="Önceki yıl">‹</button>'+
+      '<h3 style="margin:0;text-align:center">📅 '+year+' Aylık Yeni Müşteriler</h3>'+
+      '<button class="btn" onclick="openPortfolio('+(portfolioYearOffset+1)+')" aria-label="Sonraki yıl" '+(year>=currentYear+1?'disabled':'')+'>›</button>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:8px">'+
+      '<button class="btn" onclick="openPortfolio('+ (currentYear-year) +')">Bu yıl ('+currentYear+')</button>'+
+    '</div>'+
     '<div class="muted" style="font-size:12px;margin-bottom:8px">Müşterinin ilk randevu tarihine göre hesaplanır; ilk randevusu bulunmayanlarda kayıt tarihi kullanılır. Aynı müşteri tekrar sayılmaz.</div>'+
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;background:#eaf4f1;font-size:12px;font-weight:800"><span>Ay</span><span>🐶 Köpek</span><span>🐱 Kedi</span><span>Toplam</span></div>'+
