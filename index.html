@@ -1249,8 +1249,20 @@ function openPortfolio(yearOffset=portfolioYearOffset){
       firstAppointmentByCustomer[a.customer_id]=d;
     }
   });
-  // Müşteri kartının oluşturulma tarihi esas alınır; randevu tarihi kullanılmaz.
-  const customerRegistrationDate = c => String(c.created_at || '').slice(0,10);
+  // Öncelik müşteri kartının created_at tarihi. Eski kayıtlarda bu alan boşsa,
+  // geçmiş aylık dağılım tamamen kaybolmasın diye ilk randevu tarihi yedek alınır.
+  const firstAppointmentByCustomer={};
+  (db.appointments||[]).forEach(a=>{
+    if(!a.customer_id||!a.appointment_date)return;
+    const d=String(a.appointment_date).slice(0,10);
+    if(!firstAppointmentByCustomer[a.customer_id]||d<firstAppointmentByCustomer[a.customer_id]){
+      firstAppointmentByCustomer[a.customer_id]=d;
+    }
+  });
+  const customerRegistrationDate = c => {
+    const created=String(c.created_at||'').slice(0,10);
+    return created || firstAppointmentByCustomer[c.id] || '';
+  };
   let monthlyNew=[];
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0');
