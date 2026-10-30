@@ -1252,12 +1252,7 @@ function openPortfolio(yearOffset=portfolioYearOffset){
   let monthlyNew=[];
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0');
-    let rows=active.filter(c=>{
-      const first=firstAppointmentByCustomer[c.id];
-      const created=String(c.created_at||'').slice(0,10);
-      const firstDate=first||created;
-      return firstDate.slice(0,7)===prefix;
-    });
+    let rows=active.filter(c=>customerRegistrationDate(c).slice(0,7)===prefix);
     let mc=rows.filter(c=>String(c.pet_type||'').trim().toLowerCase()==='kedi').length;
     let md=rows.filter(c=>['köpek','kopek'].includes(String(c.pet_type||'').trim().toLowerCase())).length;
     monthlyNew.push({month:monthNames[m],cats:mc,dogs:md,total:rows.length,current:year===currentYear&&m===base.getMonth()});
@@ -1282,7 +1277,7 @@ function openPortfolio(yearOffset=portfolioYearOffset){
     '<div style="display:flex;justify-content:center;gap:8px;margin-bottom:8px">'+
       '<button class="btn" onclick="openPortfolio('+ (currentYear-year) +')">Bu yıl ('+currentYear+')</button>'+
     '</div>'+
-    '<div class="muted" style="font-size:12px;margin-bottom:8px">Müşterinin ilk randevu tarihine göre hesaplanır; ilk randevusu bulunmayanlarda kayıt tarihi kullanılır. Aynı müşteri tekrar sayılmaz.</div>'+
+    '<div class="muted" style="font-size:12px;margin-bottom:8px">Müşteri kartı hangi ay oluşturulduysa o ayda sayılır. Randevu tarihleri dikkate alınmaz. Aynı müşteri tekrar sayılmaz.</div>'+
     '<div class="card" style="padding:0;overflow:hidden">'+
       '<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;background:#eaf4f1;font-size:12px;font-weight:800"><span>Ay</span><span>🐶 Köpek</span><span>🐱 Kedi</span><span>Toplam</span></div>'+
       monthlyNew.map(r=>'<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;border-top:1px solid #e5ecea;'+(r.current?'background:#effaf7;font-weight:800;':'')+'"><span>'+r.month+(r.current?' •':'')+'</span><span>'+r.dogs+'</span><span>'+r.cats+'</span><span>'+r.total+'</span></div>').join('')+
