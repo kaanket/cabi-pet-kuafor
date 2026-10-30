@@ -1249,6 +1249,8 @@ function openPortfolio(yearOffset=portfolioYearOffset){
       firstAppointmentByCustomer[a.customer_id]=d;
     }
   });
+  // Müşteri kartının oluşturulma tarihi esas alınır; randevu tarihi kullanılmaz.
+  const customerRegistrationDate = c => String(c.created_at || '').slice(0,10);
   let monthlyNew=[];
   for(let m=0;m<12;m++){
     let prefix=year+'-'+String(m+1).padStart(2,'0');
@@ -1283,7 +1285,7 @@ function openPortfolio(yearOffset=portfolioYearOffset){
       monthlyNew.map(r=>'<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr .8fr;gap:4px;padding:10px 12px;border-top:1px solid #e5ecea;'+(r.current?'background:#effaf7;font-weight:800;':'')+'"><span>'+r.month+(r.current?' •':'')+'</span><span>'+r.dogs+'</span><span>'+r.cats+'</span><span>'+r.total+'</span></div>').join('')+
     '</div>'+
     (other?'<div class="card" style="text-align:center"><b>Diğer / türü belirtilmemiş</b><div style="font-size:22px;margin-top:4px">'+other+'</div></div>':'')+
-    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez. İlk randevusu olmayan müşteriler kayıt tarihine göre sayılır.</div>'+
+    '<div class="muted" style="font-size:12px;margin-top:12px">Silinmiş müşteriler portföy sayısına dahil edilmez. Aylık dağılım müşteri kartının oluşturulma tarihine göre hesaplanır.</div>'+
     '<button class="btn" style="margin-top:16px;width:100%" onclick="closeModal()">Kapat</button>';
   $('modal').style.display='flex';
 }
